@@ -14,12 +14,8 @@ const { kv } = require("@vercel/kv");
 const SOLANA_NETWORK = "devnet";
 const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), "confirmed");
 
-const SPL_TOKEN_MINT = new PublicKey(
-  "Gh9ZwEmdLJ8DscKNTkTqYPbbyL6ixrC" 
-);
-const MY_WALLET_ADDRESS = new PublicKey(
-  "Dkx5Ek7LJtXgazouGzp9SPGqUjj9ZTd2XMx4WkUJhvuo" 
-);
+const SPL_TOKEN_MINT = new PublicKey(process.env.SPL_TOKEN_MINT);
+const MY_WALLET_ADDRESS = new PublicKey(process.env.MY_WALLET_ADDRESS);
 
 /**
  * Factory function untuk membuat middleware x402
