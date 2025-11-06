@@ -101,8 +101,13 @@ export function useX402(url) {
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
+          // Dapatkan konteks blockhash terbaru untuk API confirmTransaction baru
+          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
           signature = await sendTransaction(tx, connection);
-          await connection.confirmTransaction(signature, "confirmed");
+          await connection.confirmTransaction(
+            { signature, blockhash, lastValidBlockHeight },
+            "confirmed"
+          );
           console.log("Transaksi dikonfirmasi:", signature);
         } catch (walletError) {
           // Tangkap error jika pengguna menolak
