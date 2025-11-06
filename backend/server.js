@@ -1,25 +1,23 @@
 // server.js
 
 const express = require("express");
-const { x402Paywall } = require("./x402-paywall"); // Impor middleware
+const { x402Paywall } = require("./x402-paywall"); 
 
 const app = express();
-const PORT = 3001;
 
-// Ini adalah API publik, tidak perlu bayar
+// Ini adalah API publik
 app.get("/api/public", (req, res) => {
   res.json({ message: "Ini data gratis untuk semua!" });
 });
 
-// Ini adalah API premium, dilindungi oleh x402
-// Membutuhkan pembayaran 0.01 token
+// Ini adalah API premium
 app.get(
   "/api/premium-data",
-  x402Paywall(0.01), // <-- AJAIBNYA DI SINI!
+  x402Paywall(0.01), 
   (req, res) => {
-    // Kode ini HANYA akan berjalan jika pembayaran sudah valid
+    // Kode ini hanya akan berjalan jika pembayaran sudah valid
     res.json({
-      message: "Ini adalah data premium yang sangat rahasia!",
+      message: "Ini adalah data premium!",
       timestamp: new Date().toISOString(),
     });
   }
