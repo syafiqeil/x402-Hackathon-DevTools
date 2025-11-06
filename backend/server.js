@@ -5,6 +5,14 @@ const cors = require("cors");
 const { x402Paywall } = require("./x402-paywall"); 
 
 const app = express();
+// Set header CORS lebih awal agar juga terpasang saat terjadi error downstream
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use(cors({ origin: true }));
 app.options('*', cors());
 

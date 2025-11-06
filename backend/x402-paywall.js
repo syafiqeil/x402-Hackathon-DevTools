@@ -28,6 +28,9 @@ const MY_WALLET_ADDRESS = new PublicKey(
 function x402Paywall(amount) {
   return async (req, res, next) => {
     try {
+      const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+      // fallback in-memory store saat KV belum dikonfigurasi (dev/demo)
+      global.__usedRefs = global.__usedRefs || new Set();
       // 1. LIHAT JIKA ADA BUKTI PEMBAYARAN (VERIFICATION PATH)
       const authHeader = req.headers["authorization"];
       const signature = authHeader && authHeader.startsWith("x402 ")
@@ -37,7 +40,12 @@ function x402Paywall(amount) {
 
       if (signature && reference) {
         // 1. Cek apakah referensi sudah pernah digunakan (MENGGUNAKAN VERCEL KV)
-        const isUsed = await kv.get(reference); 
+        let isUsed = false;
+        if (kvConfigured) {
+          isUsed = await kv.get(reference);
+        } else {
+          isUsed = global.__usedRefs.has(reference);
+        }
         if (isUsed) {
           return res.status(401).json({ error: "Pembayaran sudah diklaim" });
         }
@@ -73,7 +81,11 @@ function x402Paywall(amount) {
 
         if (isAmountValid && isDestinationValid && isReferenceValid) {
           // PEMBAYARAN BERHASIL! Simpan referensi ke Vercel KV agar tidak bisa dipakai lagi
-          await kv.set(reference, true, { ex: 300 }); 
+          if (kvConfigured) {
+            await kv.set(reference, true, { ex: 300 });
+          } else {
+            global.__usedRefs.add(reference);
+          }
           
           console.log("Pembayaran valid. Akses diberikan.");
           next();
