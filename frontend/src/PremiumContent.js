@@ -2,7 +2,7 @@
 
 import React from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useX402 } from "../../useX402";
+import { useX402 } from "./useX402";
 
 function PremiumContent() {
   // Gunakan hook untuk API publik
