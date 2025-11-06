@@ -92,20 +92,27 @@ export function useX402(url) {
         const payerPubKey = publicKey;
         console.log("Payer PublicKey:", payerPubKey.toBase58());
 
+        console.log("Mengambil mint info...");
         const mintInfo = await getMint(connection, mintPubKey);
+        console.log("Mint info berhasil:", mintInfo);
         const amountInSmallestUnit = invoice.amount * Math.pow(10, mintInfo.decimals);
+        console.log("Amount in smallest unit:", amountInSmallestUnit);
 
         // Cari alamat token account (ATA) pembayar
+        console.log("Menghitung ATA pembayar...");
         const payerTokenAccountAddress = await getAssociatedTokenAddress(
           mintPubKey,
           payerPubKey
         );
+        console.log("ATA pembayar:", payerTokenAccountAddress.toBase58());
 
         // Cek apakah ATA pembayar sudah ada dan punya saldo
         let payerTokenAccountInfo = null;
         let payerTokenAccountExists = false;
         try {
+          console.log("Mengecek apakah ATA pembayar sudah ada...");
           payerTokenAccountInfo = await getAccount(connection, payerTokenAccountAddress);
+          console.log("ATA pembayar sudah ada, saldo:", payerTokenAccountInfo.amount.toString());
           payerTokenAccountExists = true;
           
           // Cek apakah saldo cukup
@@ -113,44 +120,72 @@ export function useX402(url) {
             throw new Error(`Saldo token tidak cukup. Diperlukan: ${invoice.amount}, Tersedia: ${Number(payerTokenAccountInfo.amount) / Math.pow(10, mintInfo.decimals)}`);
           }
         } catch (err) {
+          console.log("Error saat cek ATA pembayar:", err.message);
           if (err.message.includes('Saldo token tidak cukup')) {
             setError(err.message);
             throw err;
           }
+          if (err.message.includes('Invalid public key')) {
+            console.error("Invalid public key error di getAccount:", err);
+            throw new Error(`Error saat mengakses token account: ${err.message}`);
+          }
           // Account tidak ada, perlu dibuat
+          console.log("ATA pembayar belum ada, akan dibuat");
           payerTokenAccountExists = false;
         }
 
         // Tambahkan instruksi untuk MEMBUAT ATA hanya jika belum ada
         if (!payerTokenAccountExists) {
-          tx.add(
-            createAssociatedTokenAccountInstruction(
-              payerPubKey, // Payer (yang bayar gas)
-              payerTokenAccountAddress, // Alamat ATA baru
-              payerPubKey, // Pemilik ATA
-              mintPubKey // Mint token
-            )
-          );
+          console.log("Menambahkan instruksi create ATA...");
+          try {
+            tx.add(
+              createAssociatedTokenAccountInstruction(
+                payerPubKey, // Payer (yang bayar gas)
+                payerTokenAccountAddress, // Alamat ATA baru
+                payerPubKey, // Pemilik ATA
+                mintPubKey // Mint token
+              )
+            );
+            console.log("Instruksi create ATA berhasil ditambahkan");
+          } catch (err) {
+            console.error("Error saat membuat instruksi create ATA:", err);
+            throw new Error(`Error saat membuat instruksi create ATA: ${err.message}`);
+          }
         }
 
         // Buat instruksi transfer token
-        tx.add(
-          createTransferInstruction(
-            payerTokenAccountAddress, // Dari (ATA pembayar)
-            recipientPubKey, // Ke (ATA penerima)
-            payerPubKey, // Otoritas (dompet pembayar)
-            amountInSmallestUnit
-          )
-        );
+        console.log("Menambahkan instruksi transfer token...");
+        try {
+          tx.add(
+            createTransferInstruction(
+              payerTokenAccountAddress, // Dari (ATA pembayar)
+              recipientPubKey, // Ke (ATA penerima)
+              payerPubKey, // Otoritas (dompet pembayar)
+              amountInSmallestUnit
+            )
+          );
+          console.log("Instruksi transfer token berhasil ditambahkan");
+        } catch (err) {
+          console.error("Error saat membuat instruksi transfer:", err);
+          throw new Error(`Error saat membuat instruksi transfer: ${err.message}`);
+        }
 
         // Buat instruksi memo
-        tx.add(
-          new TransactionInstruction({
-            keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: true }],
-            data: Buffer.from(invoice.reference, "utf-8"),
-            programId: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz"),
-          })
-        );
+        console.log("Menambahkan instruksi memo...");
+        try {
+          const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
+          tx.add(
+            new TransactionInstruction({
+              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: true }],
+              data: Buffer.from(invoice.reference, "utf-8"),
+              programId: memoProgramId,
+            })
+          );
+          console.log("Instruksi memo berhasil ditambahkan");
+        } catch (err) {
+          console.error("Error saat membuat instruksi memo:", err);
+          throw new Error(`Error saat membuat instruksi memo: ${err.message}`);
+        }
         
         // 4. KIRIM TRANSAKSI 
         let signature;
