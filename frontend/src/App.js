@@ -23,7 +23,6 @@ function App() {
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <PremiumContent />
-          
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
