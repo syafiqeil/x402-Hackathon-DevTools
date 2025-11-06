@@ -59,21 +59,38 @@ export function useX402(url) {
           throw new Error("Invoice tidak lengkap. Pastikan backend mengirim token, recipient, dan reference.");
         }
 
+        // Validasi publicKey dari wallet
+        if (!publicKey) {
+          throw new Error("Wallet publicKey tidak tersedia. Pastikan wallet terhubung.");
+        }
+
+        console.log("Invoice diterima:", invoice);
+        console.log("PublicKey wallet:", publicKey?.toBase58());
+
         // Alamat yang diperlukan - dengan error handling
         let mintPubKey, recipientPubKey;
         try {
-          mintPubKey = new PublicKey(invoice.token.trim());
+          const tokenStr = String(invoice.token).trim();
+          console.log("Membuat PublicKey untuk token:", tokenStr);
+          mintPubKey = new PublicKey(tokenStr);
+          console.log("Token PublicKey berhasil:", mintPubKey.toBase58());
         } catch (err) {
+          console.error("Error membuat PublicKey untuk token:", err);
           throw new Error(`Token mint address tidak valid: ${invoice.token}. Error: ${err.message}`);
         }
         
         try {
-          recipientPubKey = new PublicKey(invoice.recipient.trim()); // Ini adalah ATA penerima
+          const recipientStr = String(invoice.recipient).trim();
+          console.log("Membuat PublicKey untuk recipient:", recipientStr);
+          recipientPubKey = new PublicKey(recipientStr); // Ini adalah ATA penerima
+          console.log("Recipient PublicKey berhasil:", recipientPubKey.toBase58());
         } catch (err) {
+          console.error("Error membuat PublicKey untuk recipient:", err);
           throw new Error(`Recipient address tidak valid: ${invoice.recipient}. Error: ${err.message}`);
         }
         
         const payerPubKey = publicKey;
+        console.log("Payer PublicKey:", payerPubKey.toBase58());
 
         const mintInfo = await getMint(connection, mintPubKey);
         const amountInSmallestUnit = invoice.amount * Math.pow(10, mintInfo.decimals);
