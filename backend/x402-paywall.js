@@ -16,11 +16,11 @@ const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), "confirmed");
 // Alamat MINT Token (Contoh: USDC di devnet)
 // Anda bisa buat token Anda sendiri di https://spl-token-ui.solana.com/
 const SPL_TOKEN_MINT = new PublicKey(
-  "Gh9ZwEmdLJ8DscKNTkTqYPbbyL6ixrC tempList" // Ganti dengan MINT TOKEN ANDA di Devnet
+  "Gh9ZwEmdLJ8DscKNTkTqYPbbyL6ixrC tempList" 
 );
 // Alamat DOMPET (wallet) Anda untuk menerima pembayaran
 const MY_WALLET_ADDRESS = new PublicKey(
-  "YOUR_WALLET_PUBLIC_KEY" // Ganti dengan Public Key dompet ANDA
+  "Dkx5Ek7LJtXgazouGzp9SPGqUjj9ZTd2XMx4WkUJhvuo" 
 );
 
 /**
@@ -39,6 +39,12 @@ function x402Paywall(amount) {
       const reference = req.query.reference ? req.query.reference.toString() : null;
 
       if (signature && reference) {
+        // 1. Cek apakah referensi sudah pernah digunakan
+        const isUsed = await database.get(reference);
+        if (isUsed) {
+          return res.status(401).json({ error: "Pembayaran sudah diklaim" });
+        }
+
         console.log(`Verifikasi pembayaran: sig=${signature}, ref=${reference}`);
 
         // Verifikasi transaksi di blockchain
@@ -74,6 +80,8 @@ function x402Paywall(amount) {
 
         if (isAmountValid && isDestinationValid && isReferenceValid) {
           // PEMBAYARAN BERHASIL! Berikan akses ke resource.
+          await database.set(reference, true, { ttl: 300 });
+          
           console.log("Pembayaran valid. Akses diberikan.");
           next(); // Lanjut ke handler route yang sebenarnya
         } else {

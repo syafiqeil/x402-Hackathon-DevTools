@@ -1,7 +1,7 @@
 // server.js
 
 const express = require("express");
-const { x402Paywall } = require("../x402-paywall"); // Impor middleware
+const { x402Paywall } = require("./x402-paywall"); // Impor middleware
 
 const app = express();
 const PORT = 3001;

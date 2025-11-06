@@ -8,6 +8,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import {
+  getMint,
   createTransferInstruction,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
@@ -57,6 +58,9 @@ export function useX402(url) {
         const recipientPubKey = new PublicKey(invoice.recipient); // Ini adalah ATA penerima
         const payerPubKey = publicKey;
 
+        const mintInfo = await getMint(connection, mintPubKey);
+        const amountInSmallestUnit = invoice.amount * Math.pow(10, mintInfo.decimals);
+
         // Cari alamat token account (ATA) pembayar
         const payerTokenAccount = await getAssociatedTokenAddress(
           mintPubKey,
@@ -80,7 +84,7 @@ export function useX402(url) {
             payerTokenAccount, // Dari (ATA pembayar)
             recipientPubKey, // Ke (ATA penerima)
             payerPubKey, // Otoritas (dompet pembayar)
-            invoice.amount * Math.pow(10, 6) // Jumlah (Asumsi 6 desimal)
+            amountInSmallestUnit
           )
         );
 
