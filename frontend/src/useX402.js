@@ -12,6 +12,7 @@ import {
   createTransferInstruction,
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
+  getAccount,
 } from "@solana/spl-token";
 
 // Untuk mendeteksi error spesifik dari dompet
@@ -67,16 +68,27 @@ export function useX402(url) {
           payerPubKey
         );
 
-        // Tambahkan instruksi untuk MEMBUAT ATA jika belum ada.
-        // Ini adalah langkah 'idempotent' dan sangat penting.
-        tx.add(
-          createAssociatedTokenAccountInstruction(
-            payerPubKey, // Payer (yang bayar gas)
-            payerTokenAccount, // Alamat ATA baru/yang sudah ada
-            payerPubKey, // Pemilik ATA
-            mintPubKey // Mint token
-          )
-        );
+        // Cek apakah ATA pembayar sudah ada
+        let payerTokenAccountExists = false;
+        try {
+          await getAccount(connection, payerTokenAccount);
+          payerTokenAccountExists = true;
+        } catch (err) {
+          // Account tidak ada, perlu dibuat
+          payerTokenAccountExists = false;
+        }
+
+        // Tambahkan instruksi untuk MEMBUAT ATA hanya jika belum ada
+        if (!payerTokenAccountExists) {
+          tx.add(
+            createAssociatedTokenAccountInstruction(
+              payerPubKey, // Payer (yang bayar gas)
+              payerTokenAccount, // Alamat ATA baru
+              payerPubKey, // Pemilik ATA
+              mintPubKey // Mint token
+            )
+          );
+        }
 
         // Buat instruksi transfer token
         tx.add(
@@ -101,8 +113,10 @@ export function useX402(url) {
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
-          // Dapatkan konteks blockhash terbaru untuk API confirmTransaction baru
+          // Dapatkan konteks blockhash terbaru dan set ke transaksi
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = payerPubKey;
           signature = await sendTransaction(tx, connection);
           await connection.confirmTransaction(
             { signature, blockhash, lastValidBlockHeight },
