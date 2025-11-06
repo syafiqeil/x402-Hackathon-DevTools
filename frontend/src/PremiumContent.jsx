@@ -4,11 +4,11 @@ import React from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useX402 } from "./useX402";
 
-const VERCEL_BACKEND_URL = "https://syafiqeil.vercel.app";
+const API_BASE = import.meta.env.VITE_API_URL || ""; 
 
 function PremiumContent() {
-  const publicApi = useX402(`${VERCEL_BACKEND_URL}/api/public`);
-  const premiumApi = useX402(`${VERCEL_BACKEND_URL}/api/premium-data`);
+  const publicApi = useX402(`${API_BASE}/api/public`);
+  const premiumApi = useX402(`${API_BASE}/api/premium-data`);
 
   return (
     <div style={{ padding: 20 }}>
