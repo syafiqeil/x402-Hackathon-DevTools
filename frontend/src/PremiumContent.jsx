@@ -4,7 +4,8 @@ import React from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useX402 } from "./useX402";
 
-const API_BASE = import.meta.env.VITE_API_URL || ""; 
+const rawBase = import.meta.env.VITE_API_URL || "";
+const API_BASE = rawBase.replace(/\/$/, ""); 
 
 function PremiumContent() {
   const publicApi = useX402(`${API_BASE}/api/public`);
