@@ -10,8 +10,7 @@ import { clusterApiUrl } from "@solana/web3.js";
 import { useMemo } from "react";
 require("@solana/wallet-adapter-react-ui/styles.css");
 
-// Komponen Utama Anda (misal: PremiumContent)
-// import PremiumContent from './PremiumContent';
+import PremiumContent from './PremiumContent';
 
 function App() {
   const solanaNetwork = "devnet";
@@ -22,8 +21,7 @@ function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          {/* Komponen Anda masuk di sini */}
-          {/* <PremiumContent /> */}
+          <PremiumContent />
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
