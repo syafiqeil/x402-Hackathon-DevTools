@@ -1,5 +1,6 @@
-// App.js 
+// frontend/src/App.js
 
+import React, { useMemo } from "react";
 import {
   ConnectionProvider,
   WalletProvider,
@@ -7,10 +8,10 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
-import { useMemo } from "react";
+
 require("@solana/wallet-adapter-react-ui/styles.css");
 
-import PremiumContent from './PremiumContent';
+import PremiumContent from "./PremiumContent"; 
 
 function App() {
   const solanaNetwork = "devnet";
@@ -22,6 +23,7 @@ function App() {
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <PremiumContent />
+          
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
