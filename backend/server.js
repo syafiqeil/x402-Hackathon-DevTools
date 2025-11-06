@@ -5,21 +5,8 @@ const cors = require("cors");
 const { x402Paywall } = require("./x402-paywall"); 
 
 const app = express();
-const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN, 
-].filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); 
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+app.use(cors({ origin: true }));
+app.options('*', cors());
 
 // Ini adalah API publik
 app.get("/api/public", (req, res) => {
