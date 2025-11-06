@@ -54,9 +54,25 @@ export function useX402(url) {
         // 3. BANGUN TRANSAKSI
         const tx = new Transaction();
 
-        // Alamat yang diperlukan
-        const mintPubKey = new PublicKey(invoice.token);
-        const recipientPubKey = new PublicKey(invoice.recipient); // Ini adalah ATA penerima
+        // Validasi invoice
+        if (!invoice.token || !invoice.recipient || !invoice.reference) {
+          throw new Error("Invoice tidak lengkap. Pastikan backend mengirim token, recipient, dan reference.");
+        }
+
+        // Alamat yang diperlukan - dengan error handling
+        let mintPubKey, recipientPubKey;
+        try {
+          mintPubKey = new PublicKey(invoice.token.trim());
+        } catch (err) {
+          throw new Error(`Token mint address tidak valid: ${invoice.token}. Error: ${err.message}`);
+        }
+        
+        try {
+          recipientPubKey = new PublicKey(invoice.recipient.trim()); // Ini adalah ATA penerima
+        } catch (err) {
+          throw new Error(`Recipient address tidak valid: ${invoice.recipient}. Error: ${err.message}`);
+        }
+        
         const payerPubKey = publicKey;
 
         const mintInfo = await getMint(connection, mintPubKey);

@@ -26,8 +26,21 @@ function x402Paywall(amount) {
       if (!MINT_STR || !RECIPIENT_OWNER_STR) {
         return res.status(500).json({ error: "Server not configured (missing SPL_TOKEN_MINT/MY_WALLET_ADDRESS)" });
       }
-      const SPL_TOKEN_MINT = new PublicKey(MINT_STR);
-      const MY_WALLET_ADDRESS = new PublicKey(RECIPIENT_OWNER_STR);
+      
+      let SPL_TOKEN_MINT, MY_WALLET_ADDRESS;
+      try {
+        SPL_TOKEN_MINT = new PublicKey(MINT_STR.trim());
+      } catch (err) {
+        console.error("Invalid SPL_TOKEN_MINT:", MINT_STR, err);
+        return res.status(500).json({ error: `Invalid SPL_TOKEN_MINT: ${MINT_STR}` });
+      }
+      
+      try {
+        MY_WALLET_ADDRESS = new PublicKey(RECIPIENT_OWNER_STR.trim());
+      } catch (err) {
+        console.error("Invalid MY_WALLET_ADDRESS:", RECIPIENT_OWNER_STR, err);
+        return res.status(500).json({ error: `Invalid MY_WALLET_ADDRESS: ${RECIPIENT_OWNER_STR}` });
+      }
       const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
       if (kvConfigured && !kvClient) {
         ({ kv: kvClient } = require("@vercel/kv"));
@@ -105,7 +118,14 @@ function x402Paywall(amount) {
         // 2. TIDAK ADA BUKTI BAYAR (CHALLENGE PATH)
         console.log("Tidak ada bukti bayar. Mengirim tantangan 402.");
 
-        const myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
+        let myTokenAccount;
+        try {
+          myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
+        } catch (err) {
+          console.error("Error calculating ATA:", err);
+          return res.status(500).json({ error: `Failed to calculate recipient token account: ${err.message}` });
+        }
+        
         const newReference = randomUUID();
 
         const invoice = {
