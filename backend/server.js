@@ -6,11 +6,18 @@ const { x402Paywall } = require("./x402-paywall");
 
 const app = express();
 
-const corsOptions = {
-  origin: "https://x402-hackathon-devtools-fe.vercel.app"
-};
+const cors = require('cors');
 
-app.use(cors(corsOptions));
+// Let everything through (debug only)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+app.use(cors());
+app.options('*', cors());
 
 // Ini adalah API publik
 app.get("/api/public", (req, res) => {
