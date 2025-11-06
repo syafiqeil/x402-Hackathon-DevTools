@@ -14,9 +14,6 @@ const { kv } = require("@vercel/kv");
 const SOLANA_NETWORK = "devnet";
 const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), "confirmed");
 
-const SPL_TOKEN_MINT = new PublicKey(process.env.SPL_TOKEN_MINT);
-const MY_WALLET_ADDRESS = new PublicKey(process.env.MY_WALLET_ADDRESS);
-
 /**
  * Factory function untuk membuat middleware x402
  * @param {number} amount - Jumlah token yang dibutuhkan
@@ -24,6 +21,13 @@ const MY_WALLET_ADDRESS = new PublicKey(process.env.MY_WALLET_ADDRESS);
 function x402Paywall(amount) {
   return async (req, res, next) => {
     try {
+      // Validasi konfigurasi penting
+      const { SPL_TOKEN_MINT: MINT_STR, MY_WALLET_ADDRESS: RECIPIENT_OWNER_STR } = process.env;
+      if (!MINT_STR || !RECIPIENT_OWNER_STR) {
+        return res.status(500).json({ error: "Server not configured (missing SPL_TOKEN_MINT/MY_WALLET_ADDRESS)" });
+      }
+      const SPL_TOKEN_MINT = new PublicKey(MINT_STR);
+      const MY_WALLET_ADDRESS = new PublicKey(RECIPIENT_OWNER_STR);
       const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
       // fallback in-memory store saat KV belum dikonfigurasi (dev/demo)
       global.__usedRefs = global.__usedRefs || new Set();
@@ -64,7 +68,13 @@ function x402Paywall(amount) {
         );
         const memo = memoInstruction ? bs58.decode(memoInstruction.data).toString('utf-8') : null;
 
-        const tokenTransfer = tx.meta.innerInstructions[0].instructions[0].parsed;
+        // Safeguard parsing innerInstructions
+        const inner = (tx.meta && tx.meta.innerInstructions && tx.meta.innerInstructions[0]) ? tx.meta.innerInstructions[0] : null;
+        const firstIx = inner && inner.instructions && inner.instructions[0] ? inner.instructions[0] : null;
+        const tokenTransfer = firstIx && firstIx.parsed ? firstIx.parsed : null;
+        if (!tokenTransfer || !tokenTransfer.info || !tokenTransfer.info.tokenAmount) {
+          return res.status(401).json({ error: "Transaksi tidak mengandung transfer token yang valid" });
+        }
         
         const myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
 

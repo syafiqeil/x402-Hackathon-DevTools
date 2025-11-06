@@ -6,9 +6,6 @@ const { x402Paywall } = require("./x402-paywall");
 
 const app = express();
 
-const cors = require('cors');
-
-// Let everything through (debug only)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
@@ -36,5 +33,14 @@ app.get(
     });
   }
 );
+
+// Global error handler to ensure CORS headers on errors
+app.use((err, req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 module.exports = app;
