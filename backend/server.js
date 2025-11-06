@@ -14,8 +14,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors());
-// Express v5 no longer accepts bare "*" in routes; use a valid pattern
-app.options('(.*)', cors());
 
 // Ini adalah API publik
 app.get("/api/public", (req, res) => {
