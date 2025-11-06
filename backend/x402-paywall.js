@@ -8,7 +8,7 @@ const {
 const { getAssociatedTokenAddress, getAccount } = require("@solana/spl-token");
 const { v4: uuidv4 } = require("uuid");
 const bs58 = require("bs58");
-const { kv } = require("@vercel/kv"); 
+let kvClient = null; // lazy-loaded KV client
 
 // --- KONFIGURASI ---
 const SOLANA_NETWORK = "devnet";
@@ -29,6 +29,9 @@ function x402Paywall(amount) {
       const SPL_TOKEN_MINT = new PublicKey(MINT_STR);
       const MY_WALLET_ADDRESS = new PublicKey(RECIPIENT_OWNER_STR);
       const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+      if (kvConfigured && !kvClient) {
+        ({ kv: kvClient } = require("@vercel/kv"));
+      }
       // fallback in-memory store saat KV belum dikonfigurasi (dev/demo)
       global.__usedRefs = global.__usedRefs || new Set();
       // 1. LIHAT JIKA ADA BUKTI PEMBAYARAN (VERIFICATION PATH)
@@ -41,8 +44,8 @@ function x402Paywall(amount) {
       if (signature && reference) {
         // 1. Cek apakah referensi sudah pernah digunakan (MENGGUNAKAN VERCEL KV)
         let isUsed = false;
-        if (kvConfigured) {
-          isUsed = await kv.get(reference);
+        if (kvConfigured && kvClient) {
+          isUsed = await kvClient.get(reference);
         } else {
           isUsed = global.__usedRefs.has(reference);
         }
@@ -87,8 +90,8 @@ function x402Paywall(amount) {
 
         if (isAmountValid && isDestinationValid && isReferenceValid) {
           // PEMBAYARAN BERHASIL! Simpan referensi ke Vercel KV agar tidak bisa dipakai lagi
-          if (kvConfigured) {
-            await kv.set(reference, true, { ex: 300 });
+          if (kvConfigured && kvClient) {
+            await kvClient.set(reference, true, { ex: 300 });
           } else {
             global.__usedRefs.add(reference);
           }
