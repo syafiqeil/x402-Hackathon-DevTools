@@ -63,17 +63,27 @@ export function useX402(url) {
         const amountInSmallestUnit = invoice.amount * Math.pow(10, mintInfo.decimals);
 
         // Cari alamat token account (ATA) pembayar
-        const payerTokenAccount = await getAssociatedTokenAddress(
+        const payerTokenAccountAddress = await getAssociatedTokenAddress(
           mintPubKey,
           payerPubKey
         );
 
-        // Cek apakah ATA pembayar sudah ada
+        // Cek apakah ATA pembayar sudah ada dan punya saldo
+        let payerTokenAccountInfo = null;
         let payerTokenAccountExists = false;
         try {
-          await getAccount(connection, payerTokenAccount);
+          payerTokenAccountInfo = await getAccount(connection, payerTokenAccountAddress);
           payerTokenAccountExists = true;
+          
+          // Cek apakah saldo cukup
+          if (payerTokenAccountInfo.amount < BigInt(amountInSmallestUnit)) {
+            throw new Error(`Saldo token tidak cukup. Diperlukan: ${invoice.amount}, Tersedia: ${Number(payerTokenAccountInfo.amount) / Math.pow(10, mintInfo.decimals)}`);
+          }
         } catch (err) {
+          if (err.message.includes('Saldo token tidak cukup')) {
+            setError(err.message);
+            throw err;
+          }
           // Account tidak ada, perlu dibuat
           payerTokenAccountExists = false;
         }
@@ -83,7 +93,7 @@ export function useX402(url) {
           tx.add(
             createAssociatedTokenAccountInstruction(
               payerPubKey, // Payer (yang bayar gas)
-              payerTokenAccount, // Alamat ATA baru
+              payerTokenAccountAddress, // Alamat ATA baru
               payerPubKey, // Pemilik ATA
               mintPubKey // Mint token
             )
@@ -93,7 +103,7 @@ export function useX402(url) {
         // Buat instruksi transfer token
         tx.add(
           createTransferInstruction(
-            payerTokenAccount, // Dari (ATA pembayar)
+            payerTokenAccountAddress, // Dari (ATA pembayar)
             recipientPubKey, // Ke (ATA penerima)
             payerPubKey, // Otoritas (dompet pembayar)
             amountInSmallestUnit
