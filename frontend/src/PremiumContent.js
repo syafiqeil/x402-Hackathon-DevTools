@@ -15,7 +15,6 @@ function PremiumContent() {
     <div style={{ padding: 20 }}>
       <h1>Demo x402 Hackathon</h1>
       <WalletMultiButton />
-
       <hr />
 
       {/* API Publik */}
