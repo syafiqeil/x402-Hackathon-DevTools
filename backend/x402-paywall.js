@@ -6,7 +6,7 @@ const {
   PublicKey,
 } = require("@solana/web3.js");
 const { getAssociatedTokenAddress, getAccount } = require("@solana/spl-token");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("crypto");
 const bs58 = require("bs58");
 let kvClient = null; // lazy-loaded KV client
 
@@ -106,7 +106,7 @@ function x402Paywall(amount) {
         console.log("Tidak ada bukti bayar. Mengirim tantangan 402.");
 
         const myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
-        const newReference = uuidv4();
+        const newReference = randomUUID();
 
         const invoice = {
           protocol: "x402",
