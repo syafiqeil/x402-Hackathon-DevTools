@@ -1,4 +1,4 @@
-// PremiumContent.js
+// frontend/src/PremiumContent.jsx
 
 import React from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -43,3 +43,5 @@ function PremiumContent() {
 }
 
 export default PremiumContent;
+
+

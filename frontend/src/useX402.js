@@ -1,4 +1,4 @@
-// useX402.js 
+// frontend/src/useX402.js 
 
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
