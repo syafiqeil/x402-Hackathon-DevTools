@@ -16,7 +16,7 @@ const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), "confirmed");
 // Alamat MINT Token (Contoh: USDC di devnet)
 // Anda bisa buat token Anda sendiri di https://spl-token-ui.solana.com/
 const SPL_TOKEN_MINT = new PublicKey(
-  "Gh9ZwEmdLJ8DscKNTkTqYPbbyL6ixrC tempList" 
+  "Gh9ZwEmdLJ8DscKNTkTqYPbbyL6ixrC" 
 );
 // Alamat DOMPET (wallet) Anda untuk menerima pembayaran
 const MY_WALLET_ADDRESS = new PublicKey(
