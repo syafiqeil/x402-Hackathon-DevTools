@@ -8,9 +8,7 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
-
-require("@solana/wallet-adapter-react-ui/styles.css");
-
+import "@solana/wallet-adapter-react-ui/styles.css";
 import PremiumContent from "./PremiumContent"; 
 
 function App() {
