@@ -110,11 +110,19 @@ export function useX402(url) {
 
         // Cari alamat token account (ATA) pembayar
         console.log("Menghitung ATA pembayar...");
+        console.log("Mint:", mintPubKey.toBase58());
+        console.log("Payer wallet:", payerPubKey.toBase58());
         const payerTokenAccountAddress = await getAssociatedTokenAddress(
           mintPubKey,
           payerPubKey
         );
         console.log("ATA pembayar:", payerTokenAccountAddress.toBase58());
+        console.log("ATA recipient (dari invoice):", recipientPubKey.toBase58());
+        
+        // Validasi: ATA pembayar tidak boleh sama dengan ATA recipient
+        if (payerTokenAccountAddress.equals(recipientPubKey)) {
+          throw new Error("Error: Wallet pembayar dan wallet penerima sama! Pastikan MY_WALLET_ADDRESS di backend berbeda dengan wallet yang digunakan untuk membayar.");
+        }
 
         // Cek apakah ATA pembayar sudah ada dan punya saldo
         let payerTokenAccountInfo = null;
