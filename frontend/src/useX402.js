@@ -156,10 +156,10 @@ export function useX402(url) {
           try {
             tx.add(
               createAssociatedTokenAccountInstruction(
-                payerPubKey, // Payer (yang bayar gas)
-                payerTokenAccountAddress, // Alamat ATA baru
-                payerPubKey, // Pemilik ATA
-                mintPubKey // Mint token
+                payerPubKey, 
+                payerTokenAccountAddress, 
+                payerPubKey,
+                mintPubKey
               )
             );
             console.log("Instruksi create ATA berhasil ditambahkan");
@@ -171,19 +171,17 @@ export function useX402(url) {
 
         try {
           console.log("Mengecek apakah ATA penerima sudah ada...");
-          await getAccount(connection, recipientTokenAccountAddress); // Gunakan ATA penerima yg dihitung
+          await getAccount(connection, recipientTokenAccountAddress); 
           console.log("ATA penerima sudah ada.");
         } catch (err) {
-          // Cek jika error-nya adalah "account not found"
-          // 'TokenAccountNotFoundError' adalah nama error yg lebih modern, tapi cek string juga untuk kompatibilitas
           if (err.name === 'TokenAccountNotFoundError' || err.message.includes('Account does not exist') || err.message.includes('Invalid account owner')) {
             console.log("ATA penerima belum ada, menambahkan instruksi untuk membuatnya...");
             tx.add(
               createAssociatedTokenAccountInstruction(
-                payerPubKey,                // Payer (Anda yang bayar gas)
-                recipientTokenAccountAddress, // Alamat ATA baru
-                recipientWalletPubKey,      // Pemilik ATA (si penerima)
-                mintPubKey                  // Mint token
+                payerPubKey,                
+                recipientTokenAccountAddress, 
+                recipientWalletPubKey,    
+                mintPubKey                
               )
             );
             console.log("Instruksi create ATA penerima berhasil ditambahkan");
@@ -229,7 +227,6 @@ export function useX402(url) {
             console.log("Membuat TransactionInstruction untuk memo...");
           
             const memoInstruction = new TransactionInstruction({
-              // --- KOREKSI 2: Penanda tangan memo TIDAK BOLEH writable ---
               keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: false }], 
               data: memoData,
               programId: memoProgramId,
@@ -242,12 +239,12 @@ export function useX402(url) {
             console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
             // Error ini seharusnya tidak terjadi lagi, tapi kita biarkan sebagai pengaman
             setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
-            throw pubKeyErr; // Hentikan eksekusi jika memo gagal dibuat
+            throw pubKeyErr; 
           }
         } catch (err) {
           console.error("Error saat membuat instruksi memo:", err);
           setError(`Gagal membuat instruksi memo: ${err.message}`);
-          throw err; // Hentikan eksekusi jika memo gagal dibuat
+          throw err; 
         }
         
         // 4. KIRIM TRANSAKSI 
@@ -276,8 +273,6 @@ export function useX402(url) {
           });
           
           // Pastikan transaksi memiliki signer yang benar
-          // Wallet adapter akan otomatis menambahkan signer, tapi kita perlu memastikan
-          // semua instruksi memiliki signer di keys array
           console.log("Memverifikasi instruksi memiliki signer...");
           tx.instructions.forEach((ix, idx) => {
             const hasSigner = ix.keys.some(key => key.isSigner);
@@ -288,7 +283,6 @@ export function useX402(url) {
           });
           
           // Pastikan feePayer ada sebagai signer di transaksi
-          // Wallet adapter biasanya membutuhkan ini untuk mengetahui siapa yang akan sign
           console.log("Menyiapkan transaksi untuk wallet adapter...");
           
           // Validasi transaksi sebelum dikirim
