@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { MEMO_PROGRAM_ID, createMemoInstruction } from "@solana/spl-memo";
 import {
   PublicKey,
   Transaction,
@@ -22,7 +21,9 @@ const isWalletError = (error) => {
          error.message.includes('User rejected the request');
 };
 
-const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
+const MEMO_PROGRAM_ID = new PublicKey(
+  "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz"
+);
 
 export function useX402(url) {
   const [data, setData] = useState(null);
@@ -209,23 +210,21 @@ export function useX402(url) {
         }
 
         // Buat instruksi memo
-        console.log("Menambahkan instruksi memo (patched version)...");
+        console.log("Menambahkan instruksi memo (fallback manual version)...");
         try {
-          const memoData = invoice.reference;
-          console.log("Memo data:", memoData);
+          const memoData = Buffer.from(invoice.reference, "utf-8");
 
-          const memoInstruction = createMemoInstruction(
-            memoData, 
-            [], 
-            MEMO_PROGRAM_ID
-          );
+          const memoInstruction = new TransactionInstruction({
+            keys: [], 
+            programId: MEMO_PROGRAM_ID,
+            data: memoData,
+          });
 
           console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
           tx.add(memoInstruction);
-          console.log("Instruksi memo berhasil ditambahkan (patched).");
 
         } catch (err) {
-          console.error("Error saat menambahkan memo (patched):", err);
+          console.error("Error saat membuat instruksi memo (manual fallback):", err);
           setError(`Gagal membuat instruksi memo: ${err.message}`);
           throw err;
         }
