@@ -256,11 +256,31 @@ export function useX402(url) {
             }
           });
           
-          // Gunakan sendTransaction dengan skipPreflight untuk debugging
-          signature = await sendTransaction(tx, connection, {
-            skipPreflight: false,
-            maxRetries: 3
-          });
+          // Pastikan feePayer ada sebagai signer di transaksi
+          // Wallet adapter biasanya membutuhkan ini untuk mengetahui siapa yang akan sign
+          console.log("Menyiapkan transaksi untuk wallet adapter...");
+          
+          // Validasi transaksi sebelum dikirim
+          if (!tx.recentBlockhash) {
+            throw new Error("Transaksi tidak memiliki recentBlockhash");
+          }
+          if (!tx.feePayer) {
+            throw new Error("Transaksi tidak memiliki feePayer");
+          }
+          if (tx.instructions.length === 0) {
+            throw new Error("Transaksi tidak memiliki instruksi");
+          }
+          
+          // Cek apakah semua instruksi memiliki signer
+          const allHaveSigner = tx.instructions.every(ix => ix.keys.some(key => key.isSigner));
+          if (!allHaveSigner) {
+            console.warn("Beberapa instruksi tidak memiliki signer, tapi melanjutkan...");
+          }
+          
+          console.log("Transaksi valid, mengirim ke wallet...");
+          
+          // Gunakan sendTransaction tanpa options tambahan - biarkan wallet adapter handle
+          signature = await sendTransaction(tx, connection);
           console.log("Transaksi berhasil dikirim, signature:", signature);
           console.log("Menunggu konfirmasi...");
           
