@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { MEMO_PROGRAM_ID, createMemoInstruction } from "@solana/spl-memo";
 import {
   PublicKey,
   Transaction,
@@ -15,14 +16,12 @@ import {
   getAccount,
 } from "@solana/spl-token";
 
-// Untuk mendeteksi error spesifik dari dompet
 const isWalletError = (error) => {
   return error.name === 'WalletSignTransactionError' || 
          error.name === 'WalletSendTransactionError' ||
          error.message.includes('User rejected the request');
 };
 
-// --- KOREKSI 1: String Memo Program ID dipastikan bersih dari karakter tersembunyi ---
 const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
 
 export function useX402(url) {
@@ -210,41 +209,25 @@ export function useX402(url) {
         }
 
         // Buat instruksi memo
-        console.log("Menambahkan instruksi memo...");
+        console.log("Menambahkan instruksi memo (patched version)...");
         try {
-          console.log("Membuat memo program ID dari string:", MEMO_PROGRAM_ID_STRING);
-          
-          // Coba buat PublicKey
-          let memoProgramId;
-          try {
-            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING.trim()); 
-            console.log("Memo program ID berhasil:", memoProgramId.toBase58());
-            
-            console.log("Membuat buffer untuk memo data...");
-            const memoData = Buffer.from(invoice.reference, "utf-8");
-            console.log("Memo data:", memoData.toString());
-            
-            console.log("Membuat TransactionInstruction untuk memo...");
-          
-            const memoInstruction = new TransactionInstruction({
-              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: false }], 
-              data: memoData,
-              programId: memoProgramId,
-            });
-            
-            console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
-            tx.add(memoInstruction);
-            console.log("Instruksi memo berhasil ditambahkan");
-          } catch (pubKeyErr) {
-            console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
-            // Error ini seharusnya tidak terjadi lagi, tapi kita biarkan sebagai pengaman
-            setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
-            throw pubKeyErr; 
-          }
+          const memoData = invoice.reference;
+          console.log("Memo data:", memoData);
+
+          const memoInstruction = createMemoInstruction(
+            memoData, 
+            [], 
+            MEMO_PROGRAM_ID
+          );
+
+          console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
+          tx.add(memoInstruction);
+          console.log("Instruksi memo berhasil ditambahkan (patched).");
+
         } catch (err) {
-          console.error("Error saat membuat instruksi memo:", err);
+          console.error("Error saat menambahkan memo (patched):", err);
           setError(`Gagal membuat instruksi memo: ${err.message}`);
-          throw err; 
+          throw err;
         }
         
         // 4. KIRIM TRANSAKSI 
