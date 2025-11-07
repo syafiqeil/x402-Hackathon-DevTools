@@ -223,24 +223,83 @@ export function useX402(url) {
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
+          console.log("Jumlah instruksi dalam transaksi:", tx.instructions.length);
+          console.log("Instruksi:", tx.instructions.map((ix, idx) => ({
+            index: idx,
+            programId: ix.programId?.toBase58(),
+            keys: ix.keys?.length,
+            dataLength: ix.data?.length
+          })));
+          
           // Dapatkan konteks blockhash terbaru dan set ke transaksi
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
           tx.recentBlockhash = blockhash;
           tx.feePayer = payerPubKey;
+          
+          console.log("Mengirim transaksi ke wallet...");
+          console.log("Transaksi detail:", {
+            recentBlockhash: tx.recentBlockhash,
+            feePayer: tx.feePayer?.toBase58(),
+            numInstructions: tx.instructions.length,
+            numSigners: tx.signers?.length || 0
+          });
+          
           signature = await sendTransaction(tx, connection);
-          await connection.confirmTransaction(
-            { signature, blockhash, lastValidBlockHeight },
-            "confirmed"
-          );
-          console.log("Transaksi dikonfirmasi:", signature);
+          console.log("Transaksi berhasil dikirim, signature:", signature);
+          console.log("Menunggu konfirmasi...");
+          
+          try {
+            await connection.confirmTransaction(
+              { signature, blockhash, lastValidBlockHeight },
+              "confirmed"
+            );
+            console.log("Transaksi dikonfirmasi:", signature);
+          } catch (confirmError) {
+            console.error("Error saat konfirmasi transaksi:", confirmError);
+            // Cek apakah transaksi benar-benar gagal atau hanya timeout
+            const txStatus = await connection.getSignatureStatus(signature);
+            console.log("Status transaksi:", txStatus);
+            
+            if (txStatus.value?.err) {
+              throw new Error(`Transaksi gagal di blockchain: ${JSON.stringify(txStatus.value.err)}`);
+            } else if (txStatus.value?.confirmationStatus === 'confirmed' || txStatus.value?.confirmationStatus === 'finalized') {
+              console.log("Transaksi sebenarnya sudah confirmed, melanjutkan...");
+            } else {
+              throw new Error(`Transaksi belum dikonfirmasi: ${confirmError.message}`);
+            }
+          }
         } catch (walletError) {
-          // Tangkap error jika pengguna menolak
-          if (isWalletError(walletError)) {
-            console.log("Pengguna menolak transaksi.");
-            setError("Transaksi dibatalkan oleh pengguna.");
+          console.error("Error detail:", {
+            name: walletError?.name,
+            message: walletError?.message,
+            stack: walletError?.stack,
+            error: walletError
+          });
+          
+          // Jika sudah ada signature, berarti transaksi sudah dikirim
+          if (signature) {
+            console.log("Transaksi sudah dikirim dengan signature:", signature);
+            console.log("Tapi terjadi error saat konfirmasi. Cek status transaksi...");
+            try {
+              const txStatus = await connection.getSignatureStatus(signature);
+              console.log("Status transaksi:", txStatus);
+              if (txStatus.value?.err) {
+                setError(`Transaksi gagal di blockchain: ${JSON.stringify(txStatus.value.err)}. Signature: ${signature}`);
+              } else {
+                setError(`Transaksi dikirim tapi konfirmasi gagal. Signature: ${signature}. Cek di Solana Explorer.`);
+              }
+            } catch (statusError) {
+              setError(`Transaksi dikirim (signature: ${signature}) tapi terjadi error: ${walletError.message}`);
+            }
           } else {
-            console.error("Error saat mengirim transaksi:", walletError);
-            setError("Gagal mengirim transaksi. Coba lagi.");
+            // Tangkap error jika pengguna menolak
+            if (isWalletError(walletError)) {
+              console.log("Pengguna menolak transaksi atau wallet error.");
+              setError("Transaksi dibatalkan oleh pengguna atau wallet error. Pastikan popup Phantom muncul dan Anda approve transaksi.");
+            } else {
+              console.error("Error saat mengirim transaksi:", walletError);
+              setError(`Gagal mengirim transaksi: ${walletError.message || 'Unknown error'}. Coba lagi.`);
+            }
           }
           throw walletError; // Hentikan eksekusi
         }
