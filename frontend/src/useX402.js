@@ -291,8 +291,22 @@ export function useX402(url) {
             throw new Error(`Transaksi tidak bisa di-serialize: ${serializeError.message}`);
           }
           
-          // Gunakan sendTransaction tanpa options tambahan - biarkan wallet adapter handle
-          signature = await sendTransaction(tx, connection);
+          // Pastikan wallet terhubung dan ready
+          if (!publicKey) {
+            throw new Error("Wallet tidak terhubung");
+          }
+          if (!sendTransaction) {
+            throw new Error("sendTransaction tidak tersedia");
+          }
+          
+          console.log("Wallet ready, publicKey:", publicKey.toBase58());
+          console.log("Mengirim transaksi ke wallet adapter...");
+          
+          // Gunakan sendTransaction - wallet adapter akan handle signing
+          // Pastikan transaksi memiliki feePayer yang benar
+          signature = await sendTransaction(tx, connection, {
+            skipPreflight: false,
+          });
           console.log("Transaksi berhasil dikirim, signature:", signature);
           console.log("Menunggu konfirmasi...");
           
