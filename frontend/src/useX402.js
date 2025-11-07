@@ -216,7 +216,7 @@ export function useX402(url) {
           // Coba buat PublicKey
           let memoProgramId;
           try {
-            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING.replace(/[^A-Za-z0-9]/g, ''));
+            memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
             console.log("Memo program ID berhasil:", memoProgramId.toBase58());
             
             console.log("Membuat buffer untuk memo data...");
