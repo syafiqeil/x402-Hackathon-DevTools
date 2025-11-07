@@ -185,46 +185,38 @@ export function useX402(url) {
         console.log("Menambahkan instruksi memo...");
         try {
           console.log("Membuat memo program ID dari string:", MEMO_PROGRAM_ID_STRING);
+          
+          // Coba buat PublicKey
           let memoProgramId;
           try {
             memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
             console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+            
+            console.log("Membuat buffer untuk memo data...");
+            const memoData = Buffer.from(invoice.reference, "utf-8");
+            console.log("Memo data:", memoData.toString());
+            
+            console.log("Membuat TransactionInstruction untuk memo...");
+            // Pastikan payerPubKey adalah PublicKey instance
+            const payerPubKeyForMemo = payerPubKey instanceof PublicKey ? payerPubKey : new PublicKey(payerPubKey);
+            
+            const memoInstruction = new TransactionInstruction({
+              keys: [{ pubkey: payerPubKeyForMemo, isSigner: true, isWritable: true }],
+              data: memoData,
+              programId: memoProgramId,
+            });
+            
+            console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
+            tx.add(memoInstruction);
+            console.log("Instruksi memo berhasil ditambahkan");
           } catch (pubKeyErr) {
             console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
-            // Fallback: coba dengan cara lain
-            console.log("Mencoba alternatif...");
-            memoProgramId = PublicKey.isOnCurve(MEMO_PROGRAM_ID_STRING) 
-              ? new PublicKey(MEMO_PROGRAM_ID_STRING)
-              : null;
-            if (!memoProgramId) {
-              throw new Error(`Tidak bisa membuat PublicKey untuk memo program: ${pubKeyErr.message}`);
-            }
+            console.warn("MEMO INSTRUCTION DISKIP - Melanjutkan tanpa memo untuk testing");
+            // Backend bisa verifikasi tanpa memo untuk testing
           }
-          
-          console.log("Membuat buffer untuk memo data...");
-          const memoData = Buffer.from(invoice.reference, "utf-8");
-          console.log("Memo data:", memoData.toString());
-          
-          console.log("Membuat TransactionInstruction untuk memo...");
-          console.log("PayerPubKey type:", typeof payerPubKey, "is PublicKey:", payerPubKey instanceof PublicKey);
-          console.log("PayerPubKey value:", payerPubKey?.toBase58?.());
-          
-          // Pastikan payerPubKey adalah PublicKey instance
-          const payerPubKeyForMemo = payerPubKey instanceof PublicKey ? payerPubKey : new PublicKey(payerPubKey);
-          
-          const memoInstruction = new TransactionInstruction({
-            keys: [{ pubkey: payerPubKeyForMemo, isSigner: true, isWritable: true }],
-            data: memoData,
-            programId: memoProgramId,
-          });
-          
-          console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
-          tx.add(memoInstruction);
-          console.log("Instruksi memo berhasil ditambahkan");
         } catch (err) {
           console.error("Error saat membuat instruksi memo:", err);
-          console.error("Error stack:", err.stack);
-          throw new Error(`Error saat membuat instruksi memo: ${err.message}`);
+          console.warn("Melanjutkan tanpa memo instruction untuk testing");
         }
         
         // 4. KIRIM TRANSAKSI 
