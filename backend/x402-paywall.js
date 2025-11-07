@@ -79,41 +79,60 @@ function x402Paywall(amount) {
           return res.status(401).json({ error: "Transaksi pembayaran gagal di blockchain" });
         }
 
+        // Ambil memo
         const memoInstruction = tx.transaction.message.instructions.find(
           (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz"
         );
         const memo = memoInstruction ? bs58.decode(memoInstruction.data).toString('utf-8') : null;
-
-        // Safeguard parsing innerInstructions
-        const inner = (tx.meta && tx.meta.innerInstructions && tx.meta.innerInstructions[0]) ? tx.meta.innerInstructions[0] : null;
-        const firstIx = inner && inner.instructions && inner.instructions[0] ? inner.instructions[0] : null;
-        const tokenTransfer = firstIx && firstIx.parsed ? firstIx.parsed : null;
-        if (!tokenTransfer || !tokenTransfer.info || !tokenTransfer.info.tokenAmount) {
-          return res.status(401).json({ error: "Transaksi tidak mengandung transfer token yang valid" });
-        }
         
-        const myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
+        // 1. Dapatkan info mint untuk desimal
+        let decimals;
+        try {
+          const mintInfo = await connection.getParsedAccountInfo(SPL_TOKEN_MINT);
+          decimals = mintInfo.value.data.parsed.info.decimals;
+        } catch (e) {
+          console.error("Gagal mengambil info mint:", e);
+          return res.status(500).json({ error: "Gagal memvalidasi mint token" });
+        }
+        const requiredAmountSmallestUnit = BigInt(Math.floor(amount * Math.pow(10, decimals)));
 
+        // 2. Temukan saldo sebelum dan sesudah untuk wallet penerima
+        const preBalance = tx.meta.preTokenBalances.find(
+          b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
+        );
+        const postBalance = tx.meta.postTokenBalances.find(
+          b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
+        );
+
+        // 3. Hitung jumlah yang diterima
+        const preAmount = preBalance ? BigInt(preBalance.uiTokenAmount.amount) : 0n;
+        const postAmount = postBalance ? BigInt(postBalance.uiTokenAmount.amount) : 0n;
+        const amountReceived = postAmount - preAmount;
+
+        console.log(`Verifikasi Saldo: Owner ${RECIPIENT_OWNER_STR}, Saldo Awal: ${preAmount}, Saldo Akhir: ${postAmount}, Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`);
+        
         // --- VALIDASI PEMBAYARAN ---
-        const isAmountValid = tokenTransfer.info.tokenAmount.uiAmount === amount;
-        const isDestinationValid = tokenTransfer.info.destination === myTokenAccount.toBase58();
-   
-        const isReferenceValid = memo === reference; 
+        const isAmountValid = amountReceived === requiredAmountSmallestUnit;
+        const isReferenceValid = memo === reference; // Tetap wajibkan memo
 
-        console.log(`Validasi: Amount (${isAmountValid}), Destination (${isDestinationValid}), Reference (${isReferenceValid}), Memo: ${memo || 'TIDAK ADA'}`);
+        console.log(`Validasi: Amount (${isAmountValid}), Reference (${isReferenceValid}), Memo: ${memo || 'TIDAK ADA'}`);
 
-        if (isAmountValid && isDestinationValid && isReferenceValid) {
-          // PEMBAYARAN BERHASIL! Simpan referensi ke Vercel KV agar tidak bisa dipakai lagi
+        if (isAmountValid && isReferenceValid) {
+          // PEMBAYARAN BERHASIL! Simpan referensi...
           if (kvConfigured && kvClient) {
             await kvClient.set(reference, true, { ex: 300 });
           } else {
             global.__usedRefs.add(reference);
           }
           
-          console.log("Pembayaran valid. Akses diberikan.");
+          console.log("Pembayaran valid via tokenBalances. Akses diberikan.");
           next();
         } else {
-          return res.status(401).json({ error: "Pembayaran tidak valid" });
+          let errorMsg = "Pembayaran tidak valid.";
+          if (!isAmountValid) errorMsg = `Jumlah token salah. Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`;
+          else if (!isReferenceValid) errorMsg = `Memo referensi tidak cocok atau tidak ada. Memo: ${memo}`;
+          
+          return res.status(401).json({ error: errorMsg });
         }
       } else {
         console.log("Tidak ada bukti bayar. Mengirim tantangan 402.");

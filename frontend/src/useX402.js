@@ -227,11 +227,9 @@ export function useX402(url) {
             console.log("Memo data:", memoData.toString());
             
             console.log("Membuat TransactionInstruction untuk memo...");
-            // Pastikan payerPubKey adalah PublicKey instance
-            const payerPubKeyForMemo = payerPubKey instanceof PublicKey ? payerPubKey : new PublicKey(payerPubKey);
-            
+          
             const memoInstruction = new TransactionInstruction({
-              keys: [{ pubkey: payerPubKeyForMemo, isSigner: true, isWritable: true }],
+              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: true }], 
               data: memoData,
               programId: memoProgramId,
             });
@@ -242,7 +240,6 @@ export function useX402(url) {
           } catch (pubKeyErr) {
             console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
             console.warn("MEMO INSTRUCTION DISKIP - Melanjutkan tanpa memo untuk testing");
-            // Backend bisa verifikasi tanpa memo untuk testing
           }
         } catch (err) {
           console.error("Error saat membuat instruksi memo:", err);
