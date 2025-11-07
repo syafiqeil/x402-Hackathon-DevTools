@@ -8,7 +8,7 @@ const {
 const { getAssociatedTokenAddress, getAccount } = require("@solana/spl-token");
 const { randomUUID } = require("crypto");
 const bs58 = require("bs58");
-let kvClient = null; // lazy-loaded KV client
+let kvClient = null; 
 
 // --- KONFIGURASI ---
 const SOLANA_NETWORK = "devnet";
