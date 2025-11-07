@@ -15,15 +15,14 @@ import {
   getAccount,
 } from "@solana/spl-token";
 
+// Untuk mendeteksi error spesifik dari dompet
 const isWalletError = (error) => {
   return error.name === 'WalletSignTransactionError' || 
          error.name === 'WalletSendTransactionError' ||
          error.message.includes('User rejected the request');
 };
 
-const MEMO_PROGRAM_ID = new PublicKey(
-  "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz"
-);
+const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
 
 export function useX402(url) {
   const [data, setData] = useState(null);
@@ -210,26 +209,44 @@ export function useX402(url) {
         }
 
         // Buat instruksi memo
-        console.log("Menambahkan instruksi memo (fallback manual version)...");
+        console.log("Menambahkan instruksi memo...");
         try {
-          const memoData = Buffer.from(invoice.reference, "utf-8");
-
-          const memoInstruction = new TransactionInstruction({
-            keys: [], 
-            programId: MEMO_PROGRAM_ID,
-            data: memoData,
-          });
-
-          console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
-          tx.add(memoInstruction);
-
+          console.log("Membuat memo program ID dari string:", MEMO_PROGRAM_ID_STRING);
+          
+          // Coba buat PublicKey
+          let memoProgramId;
+          try {
+            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING.trim()); 
+            console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+            
+            console.log("Membuat buffer untuk memo data...");
+            const memoData = Buffer.from(invoice.reference, "utf-8");
+            console.log("Memo data:", memoData.toString());
+            
+            console.log("Membuat TransactionInstruction untuk memo...");
+          
+            const memoInstruction = new TransactionInstruction({
+              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: false }], 
+              data: memoData,
+              programId: memoProgramId,
+            });
+            
+            console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
+            tx.add(memoInstruction);
+            console.log("Instruksi memo berhasil ditambahkan");
+          } catch (pubKeyErr) {
+            console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
+            // Error ini seharusnya tidak terjadi lagi, tapi kita biarkan sebagai pengaman
+            setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
+            throw pubKeyErr; 
+          }
         } catch (err) {
-          console.error("Error saat membuat instruksi memo (manual fallback):", err);
+          console.error("Error saat membuat instruksi memo:", err);
           setError(`Gagal membuat instruksi memo: ${err.message}`);
-          throw err;
+          throw err; 
         }
         
-        // 4. kirim transaksi 
+        // 4. KIRIM TRANSAKSI 
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
@@ -308,7 +325,7 @@ export function useX402(url) {
           console.log("Wallet ready, publicKey:", publicKey.toBase58());
           console.log("Mengirim transaksi ke wallet adapter (tanpa serialize)...");
           
-          // Kirim transaksi unserialized ke wallet adapter
+          // Kirim transaksi UNSERIALIZED ke wallet adapter
           // Wallet adapter akan serialize dan sign transaksi
           signature = await sendTransaction(tx, connection);
           console.log("Transaksi berhasil dikirim, signature:", signature);
