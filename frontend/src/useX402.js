@@ -208,26 +208,13 @@ export function useX402(url) {
 
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
-
-        console.log(`DEBUG: Mengecek 'window.Buffer'`);
-        if (typeof window.Buffer === 'undefined') {
-          console.error('DEBUG: window.Buffer IS UNDEFINED. Ini adalah penyebab error.');
-        } else {
-          console.log('DEBUG: window.Buffer IS DEFINED.');
-        }
-        
-        console.log(`DEBUG: Mengecek 'global'`);
-        if (typeof global === 'undefined') {
-          console.error('DEBUG: global IS UNDEFINED. Ini juga bisa jadi penyebab.');
-        } else {
-          console.log('DEBUG: global IS DEFINED.');
-        }
-        
         try {
           let memoProgramId;
           try {
             const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
             memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
+            
+            console.log("Memo program ID berhasil:", memoProgramId.toBase58());
             
             console.log("Membuat buffer untuk memo data...");
             const memoData = Buffer.from(invoice.reference, "utf-8");
@@ -244,9 +231,9 @@ export function useX402(url) {
             console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
             tx.add(memoInstruction);
             console.log("Instruksi memo berhasil ditambahkan");
+            
           } catch (pubKeyErr) {
-            console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
-            // Error ini seharusnya tidak terjadi lagi, tapi kita biarkan sebagai pengaman
+            console.error("Error saat membuat instruksi memo:", pubKeyErr); // DIUBAH DARI log sebelumnya
             setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
             throw pubKeyErr; 
           }
