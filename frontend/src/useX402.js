@@ -173,17 +173,33 @@ export function useX402(url) {
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
         try {
+          console.log("Membuat memo program ID...");
           const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
-          tx.add(
-            new TransactionInstruction({
-              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: true }],
-              data: Buffer.from(invoice.reference, "utf-8"),
-              programId: memoProgramId,
-            })
-          );
+          console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+          
+          console.log("Membuat buffer untuk memo data...");
+          const memoData = Buffer.from(invoice.reference, "utf-8");
+          console.log("Memo data:", memoData.toString());
+          
+          console.log("Membuat TransactionInstruction untuk memo...");
+          console.log("PayerPubKey type:", typeof payerPubKey, "is PublicKey:", payerPubKey instanceof PublicKey);
+          console.log("PayerPubKey value:", payerPubKey?.toBase58?.());
+          
+          // Pastikan payerPubKey adalah PublicKey instance
+          const payerPubKeyForMemo = payerPubKey instanceof PublicKey ? payerPubKey : new PublicKey(payerPubKey);
+          
+          const memoInstruction = new TransactionInstruction({
+            keys: [{ pubkey: payerPubKeyForMemo, isSigner: true, isWritable: true }],
+            data: memoData,
+            programId: memoProgramId,
+          });
+          
+          console.log("Memo instruction berhasil dibuat, menambahkan ke transaksi...");
+          tx.add(memoInstruction);
           console.log("Instruksi memo berhasil ditambahkan");
         } catch (err) {
           console.error("Error saat membuat instruksi memo:", err);
+          console.error("Error stack:", err.stack);
           throw new Error(`Error saat membuat instruksi memo: ${err.message}`);
         }
         
