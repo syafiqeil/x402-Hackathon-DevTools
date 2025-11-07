@@ -208,6 +208,21 @@ export function useX402(url) {
 
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
+        
+        console.log(`DEBUG: Mengecek 'window.Buffer'`);
+        if (typeof window.Buffer === 'undefined') {
+          console.error('DEBUG: window.Buffer IS UNDEFINED. Ini adalah penyebab error.');
+        } else {
+          console.log('DEBUG: window.Buffer IS DEFINED.');
+        }
+        
+        console.log(`DEBUG: Mengecek 'global'`);
+        if (typeof global === 'undefined') {
+          console.error('DEBUG: global IS UNDEFINED. Ini juga bisa jadi penyebab.');
+        } else {
+          console.log('DEBUG: global IS DEFINED.');
+        }
+
         try {
           let memoProgramId;
           try {
