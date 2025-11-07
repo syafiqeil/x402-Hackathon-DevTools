@@ -244,7 +244,23 @@ export function useX402(url) {
             numSigners: tx.signers?.length || 0
           });
           
-          signature = await sendTransaction(tx, connection);
+          // Pastikan transaksi memiliki signer yang benar
+          // Wallet adapter akan otomatis menambahkan signer, tapi kita perlu memastikan
+          // semua instruksi memiliki signer di keys array
+          console.log("Memverifikasi instruksi memiliki signer...");
+          tx.instructions.forEach((ix, idx) => {
+            const hasSigner = ix.keys.some(key => key.isSigner);
+            console.log(`Instruksi ${idx}: programId=${ix.programId?.toBase58()}, hasSigner=${hasSigner}, keys=${ix.keys.length}`);
+            if (!hasSigner) {
+              console.warn(`Instruksi ${idx} tidak memiliki signer!`);
+            }
+          });
+          
+          // Gunakan sendTransaction dengan skipPreflight untuk debugging
+          signature = await sendTransaction(tx, connection, {
+            skipPreflight: false,
+            maxRetries: 3
+          });
           console.log("Transaksi berhasil dikirim, signature:", signature);
           console.log("Menunggu konfirmasi...");
           
