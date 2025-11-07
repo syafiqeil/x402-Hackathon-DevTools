@@ -98,8 +98,8 @@ export function useX402(url) {
         console.log("Mengambil mint info...");
         const mintInfo = await getMint(connection, mintPubKey);
         console.log("Mint info berhasil:", mintInfo);
-        const amountInSmallestUnit = invoice.amount * Math.pow(10, mintInfo.decimals);
-        console.log("Amount in smallest unit:", amountInSmallestUnit);
+        const amountInSmallestUnit = BigInt(Math.floor(invoice.amount * Math.pow(10, mintInfo.decimals)));
+        console.log("Amount in smallest unit:", amountInSmallestUnit.toString(), "type:", typeof amountInSmallestUnit);
 
         // Cari alamat token account (ATA) pembayar
         console.log("Menghitung ATA pembayar...");
@@ -278,6 +278,18 @@ export function useX402(url) {
           }
           
           console.log("Transaksi valid, mengirim ke wallet...");
+          
+          // Coba serialize transaksi untuk memastikan tidak ada error
+          try {
+            const serialized = tx.serialize({
+              requireAllSignatures: false,
+              verifySignatures: false
+            });
+            console.log("Transaksi berhasil di-serialize, ukuran:", serialized.length, "bytes");
+          } catch (serializeError) {
+            console.error("Error saat serialize transaksi:", serializeError);
+            throw new Error(`Transaksi tidak bisa di-serialize: ${serializeError.message}`);
+          }
           
           // Gunakan sendTransaction tanpa options tambahan - biarkan wallet adapter handle
           signature = await sendTransaction(tx, connection);
