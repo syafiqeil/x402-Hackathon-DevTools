@@ -22,6 +22,16 @@ const isWalletError = (error) => {
          error.message.includes('User rejected the request');
 };
 
+// Helper untuk mendapatkan memo program ID
+const getMemoProgramId = () => {
+  try {
+    return new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
+  } catch (err) {
+    console.error("Error creating memo program ID:", err);
+    throw err;
+  }
+};
+
 export function useX402(url) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -173,8 +183,8 @@ export function useX402(url) {
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
         try {
-          console.log("Membuat memo program ID...");
-          const memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
+          console.log("Mendapatkan memo program ID...");
+          const memoProgramId = getMemoProgramId();
           console.log("Memo program ID berhasil:", memoProgramId.toBase58());
           
           console.log("Membuat buffer untuk memo data...");
