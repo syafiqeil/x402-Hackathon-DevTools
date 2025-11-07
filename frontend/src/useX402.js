@@ -22,8 +22,6 @@ const isWalletError = (error) => {
          error.message.includes('User rejected the request');
 };
 
-const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
-
 export function useX402(url) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -211,8 +209,6 @@ export function useX402(url) {
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
         try {
-          console.log("Membuat memo program ID dari string:", MEMO_PROGRAM_ID_STRING);
-          
           // Coba buat PublicKey
           let memoProgramId;
           try {
