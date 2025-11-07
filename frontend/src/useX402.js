@@ -22,15 +22,8 @@ const isWalletError = (error) => {
          error.message.includes('User rejected the request');
 };
 
-// Helper untuk mendapatkan memo program ID
-const getMemoProgramId = () => {
-  try {
-    return new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
-  } catch (err) {
-    console.error("Error creating memo program ID:", err);
-    throw err;
-  }
-};
+// Memo program ID sebagai string - akan dikonversi ke PublicKey saat digunakan
+const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
 
 export function useX402(url) {
   const [data, setData] = useState(null);
@@ -191,9 +184,22 @@ export function useX402(url) {
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
         try {
-          console.log("Mendapatkan memo program ID...");
-          const memoProgramId = getMemoProgramId();
-          console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+          console.log("Membuat memo program ID dari string:", MEMO_PROGRAM_ID_STRING);
+          let memoProgramId;
+          try {
+            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
+            console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+          } catch (pubKeyErr) {
+            console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
+            // Fallback: coba dengan cara lain
+            console.log("Mencoba alternatif...");
+            memoProgramId = PublicKey.isOnCurve(MEMO_PROGRAM_ID_STRING) 
+              ? new PublicKey(MEMO_PROGRAM_ID_STRING)
+              : null;
+            if (!memoProgramId) {
+              throw new Error(`Tidak bisa membuat PublicKey untuk memo program: ${pubKeyErr.message}`);
+            }
+          }
           
           console.log("Membuat buffer untuk memo data...");
           const memoData = Buffer.from(invoice.reference, "utf-8");
