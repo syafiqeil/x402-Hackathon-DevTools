@@ -310,9 +310,6 @@ export function useX402(url) {
           
           console.log("Transaksi valid, mengirim ke wallet...");
           
-          // JANGAN serialize transaksi sebelum dikirim ke wallet adapter
-          // Wallet adapter perlu menandatangani transaksi terlebih dahulu
-          // Serialize hanya untuk validasi, jangan gunakan hasilnya
           try {
             const serialized = tx.serialize({
               requireAllSignatures: false,
