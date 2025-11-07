@@ -208,12 +208,26 @@ export function useX402(url) {
 
         // Buat instruksi memo
         console.log("Menambahkan instruksi memo...");
+
+        console.log(`DEBUG: Mengecek 'window.Buffer'`);
+        if (typeof window.Buffer === 'undefined') {
+          console.error('DEBUG: window.Buffer IS UNDEFINED. Ini adalah penyebab error.');
+        } else {
+          console.log('DEBUG: window.Buffer IS DEFINED.');
+        }
+        
+        console.log(`DEBUG: Mengecek 'global'`);
+        if (typeof global === 'undefined') {
+          console.error('DEBUG: global IS UNDEFINED. Ini juga bisa jadi penyebab.');
+        } else {
+          console.log('DEBUG: global IS DEFINED.');
+        }
+        
         try {
-          // Coba buat PublicKey
           let memoProgramId;
           try {
-            memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz");
-            console.log("Memo program ID berhasil:", memoProgramId.toBase58());
+            const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
+            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
             
             console.log("Membuat buffer untuk memo data...");
             const memoData = Buffer.from(invoice.reference, "utf-8");
