@@ -57,9 +57,9 @@ export function useX402(url) {
         // 3. BANGUN TRANSAKSI
         const tx = new Transaction();
 
-        // Validasi invoice
-        if (!invoice.token || !invoice.recipient || !invoice.reference) {
-          throw new Error("Invoice tidak lengkap. Pastikan backend mengirim token, recipient, dan reference.");
+        // Validasi invoice 
+        if (!invoice.token || !invoice.recipientWallet || !invoice.reference) {
+          throw new Error("Invoice tidak lengkap. Pastikan backend mengirim token, recipientWallet, dan reference.");
         }
 
         // Validasi publicKey dari wallet
@@ -70,8 +70,7 @@ export function useX402(url) {
         console.log("Invoice diterima:", invoice);
         console.log("PublicKey wallet:", publicKey?.toBase58());
 
-        // Alamat yang diperlukan - dengan error handling
-        let mintPubKey, recipientPubKey;
+        let mintPubKey, recipientWalletPubKey; 
         try {
           const tokenStr = String(invoice.token).trim();
           console.log("Membuat PublicKey untuk token:", tokenStr);
@@ -83,15 +82,15 @@ export function useX402(url) {
         }
         
         try {
-          const recipientStr = String(invoice.recipient).trim();
-          console.log("Membuat PublicKey untuk recipient:", recipientStr);
-          recipientPubKey = new PublicKey(recipientStr); // Ini adalah ATA penerima
-          console.log("Recipient PublicKey berhasil:", recipientPubKey.toBase58());
+          const recipientStr = String(invoice.recipientWallet).trim(); 
+          console.log("Membuat PublicKey untuk recipient WALLET:", recipientStr);
+          recipientWalletPubKey = new PublicKey(recipientStr);
+          console.log("Recipient Wallet PublicKey berhasil:", recipientWalletPubKey.toBase58());
         } catch (err) {
-          console.error("Error membuat PublicKey untuk recipient:", err);
-          throw new Error(`Recipient address tidak valid: ${invoice.recipient}. Error: ${err.message}`);
+          console.error("Error membuat PublicKey untuk recipient wallet:", err);
+          throw new Error(`Recipient wallet address tidak valid: ${invoice.recipientWallet}. Error: ${err.message}`);
         }
-        
+    
         const payerPubKey = publicKey;
         console.log("Payer PublicKey:", payerPubKey.toBase58());
 
@@ -103,18 +102,24 @@ export function useX402(url) {
 
         // Cari alamat token account (ATA) pembayar
         console.log("Menghitung ATA pembayar...");
-        console.log("Mint:", mintPubKey.toBase58());
-        console.log("Payer wallet:", payerPubKey.toBase58());
         const payerTokenAccountAddress = await getAssociatedTokenAddress(
           mintPubKey,
           payerPubKey
         );
         console.log("ATA pembayar:", payerTokenAccountAddress.toBase58());
-        console.log("ATA recipient (dari invoice):", recipientPubKey.toBase58());
-        
+
+        console.log("Menghitung ATA penerima...");
+        const recipientTokenAccountAddress = await getAssociatedTokenAddress(
+          mintPubKey,
+          recipientWalletPubKey 
+        );
+        console.log("ATA recipient (dihitung):", recipientTokenAccountAddress.toBase58());
+     
+        console.log("ATA recipient (dari invoice):", recipientTokenAccountAddress.toBase58()); 
+
         // Validasi: ATA pembayar tidak boleh sama dengan ATA recipient
-        if (payerTokenAccountAddress.equals(recipientPubKey)) {
-          throw new Error("Error: Wallet pembayar dan wallet penerima sama! Pastikan MY_WALLET_ADDRESS di backend berbeda dengan wallet yang digunakan untuk membayar.");
+        if (payerTokenAccountAddress.equals(recipientTokenAccountAddress)) { 
+          throw new Error("Error: Wallet pembayar dan wallet penerima sama!");
         }
 
         // Cek apakah ATA pembayar sudah ada dan punya saldo
@@ -164,14 +169,39 @@ export function useX402(url) {
           }
         }
 
+        try {
+          console.log("Mengecek apakah ATA penerima sudah ada...");
+          await getAccount(connection, recipientTokenAccountAddress); // Gunakan ATA penerima yg dihitung
+          console.log("ATA penerima sudah ada.");
+        } catch (err) {
+          // Cek jika error-nya adalah "account not found"
+          // 'TokenAccountNotFoundError' adalah nama error yg lebih modern, tapi cek string juga untuk kompatibilitas
+          if (err.name === 'TokenAccountNotFoundError' || err.message.includes('Account does not exist') || err.message.includes('Invalid account owner')) {
+            console.log("ATA penerima belum ada, menambahkan instruksi untuk membuatnya...");
+            tx.add(
+              createAssociatedTokenAccountInstruction(
+                payerPubKey,                // Payer (Anda yang bayar gas)
+                recipientTokenAccountAddress, // Alamat ATA baru
+                recipientWalletPubKey,      // Pemilik ATA (si penerima)
+                mintPubKey                  // Mint token
+              )
+            );
+            console.log("Instruksi create ATA penerima berhasil ditambahkan");
+          } else {
+            // Error lain yang tidak terduga
+            console.error("Error saat cek ATA penerima:", err);
+            throw new Error(`Error saat cek ATA penerima: ${err.message}`);
+          }
+        }
+
         // Buat instruksi transfer token
         console.log("Menambahkan instruksi transfer token...");
         try {
           tx.add(
             createTransferInstruction(
-              payerTokenAccountAddress, // Dari (ATA pembayar)
-              recipientPubKey, // Ke (ATA penerima)
-              payerPubKey, // Otoritas (dompet pembayar)
+              payerTokenAccountAddress,   
+              recipientTokenAccountAddress, 
+              payerPubKey,                
               amountInSmallestUnit
             )
           );
@@ -189,7 +219,7 @@ export function useX402(url) {
           // Coba buat PublicKey
           let memoProgramId;
           try {
-            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
+            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING.trim()); 
             console.log("Memo program ID berhasil:", memoProgramId.toBase58());
             
             console.log("Membuat buffer untuk memo data...");

@@ -97,8 +97,8 @@ function x402Paywall(amount) {
         // --- VALIDASI PEMBAYARAN ---
         const isAmountValid = tokenTransfer.info.tokenAmount.uiAmount === amount;
         const isDestinationValid = tokenTransfer.info.destination === myTokenAccount.toBase58();
-        // Untuk testing: jika memo tidak ada, skip validasi reference (hanya untuk devnet/testing)
-        const isReferenceValid = memo ? memo === reference : true; // Skip reference validation jika tidak ada memo
+   
+        const isReferenceValid = memo === reference; 
 
         console.log(`Validasi: Amount (${isAmountValid}), Destination (${isDestinationValid}), Reference (${isReferenceValid}), Memo: ${memo || 'TIDAK ADA'}`);
 
@@ -116,27 +116,17 @@ function x402Paywall(amount) {
           return res.status(401).json({ error: "Pembayaran tidak valid" });
         }
       } else {
-        // 2. TIDAK ADA BUKTI BAYAR (CHALLENGE PATH)
         console.log("Tidak ada bukti bayar. Mengirim tantangan 402.");
 
-        let myTokenAccount;
-        try {
-          myTokenAccount = await getAssociatedTokenAddress(SPL_TOKEN_MINT, MY_WALLET_ADDRESS);
-        } catch (err) {
-          console.error("Error calculating ATA:", err);
-          return res.status(500).json({ error: `Failed to calculate recipient token account: ${err.message}` });
-        }
-        
         const newReference = randomUUID();
-
         const invoice = {
           protocol: "x402",
-          recipient: myTokenAccount.toBase58(),
+          recipientWallet: MY_WALLET_ADDRESS.toBase58(), 
           amount: amount,
           token: SPL_TOKEN_MINT.toBase58(),
           reference: newReference,
         };
-
+       
         return res.status(402).json(invoice);
       }
     } catch (error) {
