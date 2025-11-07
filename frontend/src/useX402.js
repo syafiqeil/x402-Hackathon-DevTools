@@ -22,7 +22,7 @@ const isWalletError = (error) => {
          error.message.includes('User rejected the request');
 };
 
-// Memo program ID sebagai string - akan dikonversi ke PublicKey saat digunakan
+// --- KOREKSI 1: String Memo Program ID dipastikan bersih dari karakter tersembunyi ---
 const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
 
 export function useX402(url) {
@@ -229,7 +229,8 @@ export function useX402(url) {
             console.log("Membuat TransactionInstruction untuk memo...");
           
             const memoInstruction = new TransactionInstruction({
-              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: true }], 
+              // --- KOREKSI 2: Penanda tangan memo TIDAK BOLEH writable ---
+              keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: false }], 
               data: memoData,
               programId: memoProgramId,
             });
@@ -239,11 +240,14 @@ export function useX402(url) {
             console.log("Instruksi memo berhasil ditambahkan");
           } catch (pubKeyErr) {
             console.error("Error membuat PublicKey untuk memo program:", pubKeyErr);
-            console.warn("MEMO INSTRUCTION DISKIP - Melanjutkan tanpa memo untuk testing");
+            // Error ini seharusnya tidak terjadi lagi, tapi kita biarkan sebagai pengaman
+            setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
+            throw pubKeyErr; // Hentikan eksekusi jika memo gagal dibuat
           }
         } catch (err) {
           console.error("Error saat membuat instruksi memo:", err);
-          console.warn("Melanjutkan tanpa memo instruction untuk testing");
+          setError(`Gagal membuat instruksi memo: ${err.message}`);
+          throw err; // Hentikan eksekusi jika memo gagal dibuat
         }
         
         // 4. KIRIM TRANSAKSI 
