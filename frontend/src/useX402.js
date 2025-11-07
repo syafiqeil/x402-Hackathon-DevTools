@@ -279,16 +279,18 @@ export function useX402(url) {
           
           console.log("Transaksi valid, mengirim ke wallet...");
           
-          // Coba serialize transaksi untuk memastikan tidak ada error
+          // JANGAN serialize transaksi sebelum dikirim ke wallet adapter
+          // Wallet adapter perlu menandatangani transaksi terlebih dahulu
+          // Serialize hanya untuk validasi, jangan gunakan hasilnya
           try {
             const serialized = tx.serialize({
               requireAllSignatures: false,
               verifySignatures: false
             });
-            console.log("Transaksi berhasil di-serialize, ukuran:", serialized.length, "bytes");
+            console.log("Transaksi bisa di-serialize (validasi), ukuran:", serialized.length, "bytes");
           } catch (serializeError) {
             console.error("Error saat serialize transaksi:", serializeError);
-            throw new Error(`Transaksi tidak bisa di-serialize: ${serializeError.message}`);
+            throw new Error(`Transaksi tidak valid: ${serializeError.message}`);
           }
           
           // Pastikan wallet terhubung dan ready
@@ -300,13 +302,11 @@ export function useX402(url) {
           }
           
           console.log("Wallet ready, publicKey:", publicKey.toBase58());
-          console.log("Mengirim transaksi ke wallet adapter...");
+          console.log("Mengirim transaksi ke wallet adapter (tanpa serialize)...");
           
-          // Gunakan sendTransaction - wallet adapter akan handle signing
-          // Pastikan transaksi memiliki feePayer yang benar
-          signature = await sendTransaction(tx, connection, {
-            skipPreflight: false,
-          });
+          // Kirim transaksi UNSERIALIZED ke wallet adapter
+          // Wallet adapter akan serialize dan sign transaksi
+          signature = await sendTransaction(tx, connection);
           console.log("Transaksi berhasil dikirim, signature:", signature);
           console.log("Menunggu konfirmasi...");
           
