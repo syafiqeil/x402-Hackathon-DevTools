@@ -230,7 +230,7 @@ export function useX402(url) {
           throw err;
         }
         
-        // 4. KIRIM TRANSAKSI 
+        // 4. kirim transaksi 
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
@@ -309,7 +309,7 @@ export function useX402(url) {
           console.log("Wallet ready, publicKey:", publicKey.toBase58());
           console.log("Mengirim transaksi ke wallet adapter (tanpa serialize)...");
           
-          // Kirim transaksi UNSERIALIZED ke wallet adapter
+          // Kirim transaksi unserialized ke wallet adapter
           // Wallet adapter akan serialize dan sign transaksi
           signature = await sendTransaction(tx, connection);
           console.log("Transaksi berhasil dikirim, signature:", signature);
