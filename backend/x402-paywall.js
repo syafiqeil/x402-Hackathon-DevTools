@@ -80,7 +80,7 @@ function x402Paywall(amount) {
         }
 
         // Ambil memo
-        const memoInstruction = tx.transaction.message.instructions.find(
+        const memoInstruction = tx.transaction.message.instructions?.find(
           (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         );
         const memo = memoInstruction ? bs58.decode(memoInstruction.data).toString('utf-8') : null;
@@ -97,10 +97,10 @@ function x402Paywall(amount) {
         const requiredAmountSmallestUnit = BigInt(Math.floor(amount * Math.pow(10, decimals)));
 
         // 2. Temukan saldo sebelum dan sesudah untuk wallet penerima
-        const preBalance = tx.meta.preTokenBalances.find(
+        const preBalance = tx.meta.preTokenBalances?.find(
           b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
         );
-        const postBalance = tx.meta.postTokenBalances.find(
+        const postBalance = tx.meta.postTokenBalances?.find(
           b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
         );
 
