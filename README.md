@@ -118,8 +118,11 @@ This demonstrates an _agent-to-tool_ use case where an AI agent can independentl
 
 To run this project, you'll need a .env file in the backend (or in Vercel). The variables used in the live demo are:
 
-    * SPL Token Mint Address (USDC Devnet) SPL_TOKEN_MINT="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
-    * Your Solana wallet address to receive payments MY_WALLET_ADDRESS="6DBM36PKEjNmheZyJbGz12Gt7J2ch8YrooZTjWAc5xkE"
-    * (Optional) Vercel KV credentials for Replay Attack Protection KV_REST_API_URL="..." KV_REST_API_TOKEN="..."
+    * SPL Token Mint Address (USDC Devnet) 
+      SPL_TOKEN_MINT="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+    * Your Solana wallet address to receive payments 
+      MY_WALLET_ADDRESS="6DBM36PKEjNmheZyJbGz12Gt7J2ch8YrooZTjWAc5xkE"
+    * (Optional) Vercel KV credentials for Replay Attack Protection 
+      KV_REST_API_URL="..." KV_REST_API_TOKEN="..."
 
 _(Note: If KV is not configured, the backend defaults to a simple in-memory store for replay protection, which is sufficient for demo purposes)_
