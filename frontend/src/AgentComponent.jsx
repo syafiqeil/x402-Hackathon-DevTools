@@ -189,7 +189,6 @@ export function AgentComponent() {
         />
         <button
           onClick={handleSend}
-          style={{...styles.button, ...(isThinking ? styles.buttonDisabled : {})}}
           disabled={isThinking}
           className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
         >
