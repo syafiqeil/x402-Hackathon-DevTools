@@ -1,19 +1,17 @@
-// backend/server.js (FIXED)
+// backend/server.js 
 
 const express = require("express");
 const cors = require("cors");
 const { PublicKey } = require("@solana/web3.js");
 
-// ===== PERBAIKAN DI SINI (TAMBAHKAN 2 BARIS INI) =====
 const { getMint } = require("@solana/spl-token"); 
 const {
   x402Paywall,
   budgetPaywall,
   verifyTransaction,
   kv,
-  connection, // Impor 'connection' yang diekspor
+  connection, 
 } = require("./x402-paywall");
-// ===================================================
 
 const app = express();
 
@@ -23,14 +21,12 @@ app.use(cors({
 }));
 app.use(express.json()); // Middleware untuk mem-parsing body JSON
 
-// Konfigurasi dasar
 const CONFIG = {
   splToken: process.env.SPL_TOKEN_MINT,
   recipientWallet: process.env.MY_WALLET_ADDRESS,
 };
 
 // --- DATABASE DOKUMEN & ALAT AGEN ---
-
 const documentDatabase = {
   tokenomics: "Tokenomics: 50% Community, 30% Team, 20% Foundation...",
   roadmap: "Roadmap: Q1 Launch, Q2 Partnerships, Q3 Scaling...",
@@ -103,11 +99,26 @@ app.get(
   }
 );
 
+app.get("/api/get-current-budget", async (req, res) => {
+  const { payerPubkey } = req.query;
+  if (!payerPubkey) {
+    return res.status(400).json({ error: "payerPubkey is required" });
+  }
+  try {
+    const budgetKey = `budget_${payerPubkey}`;
+    const currentBudget = (await kv.get(budgetKey)) || "0";
+    res.json({ currentBudget: currentBudget });
+  } catch (e) {
+    console.error("Error fetching budget:", e);
+    res.status(500).json({ error: "Failed to fetch current budget" });
+  }
+});
+
 /**
  * IMPROVISASI #1: Endpoint Konfirmasi Setoran Anggaran
  */
 app.post("/api/confirm-budget-deposit", async (req, res) => {
-  try { // Tambahkan try...catch di sini
+  try { 
     const { signature, reference, payerPubkey, amount } = req.body;
 
     if (!signature || !reference || !payerPubkey || !amount) {
@@ -129,8 +140,6 @@ app.post("/api/confirm-budget-deposit", async (req, res) => {
 
     // Pastikan jumlah yang diterima SAMA PERSIS dengan yang diklaim
     const MINT_PUBKEY = new PublicKey(CONFIG.splToken);
-    // ===== PERBAIKAN DI SINI (BARIS 136 lama) =====
-    // 'getMint' dan 'connection' sekarang sudah terdefinisi
     const mintInfo = await getMint(connection, MINT_PUBKEY); 
     const claimedAmountSmallestUnit = BigInt(Math.floor(amount * Math.pow(10, mintInfo.decimals)));
 
