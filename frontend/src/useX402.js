@@ -226,8 +226,7 @@ export function useX402(url) {
         try {
           let memoProgramId;
           try {
-            const MEMO_PROGRAM_ID_STRING = "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz";
-            memoProgramId = new PublicKey(MEMO_PROGRAM_ID_STRING);
+            memoProgramId = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
             
             console.log("Memo program ID berhasil:", memoProgramId.toBase58());
             
