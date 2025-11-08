@@ -1,10 +1,11 @@
-// frontend/src/PremiumContent.jsx
+// frontend/src/PremiumContent.jsx (FIXED)
 
-import React, { useState } from "react"; 
+import React, { useState } from "react"; // Impor useState
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useX402 } from "./useX402"; 
+import { useX402 } from "./useX402";
 import { AgentComponent } from "./AgentComponent";
 
+// ... (Salin 'styles' Anda dari file lama) ...
 const styles = {
   container: {
     fontFamily: "Arial, sans-serif",
@@ -93,51 +94,60 @@ const styles = {
   },
 };
 
-function PremiumContent() {
-  // Gunakan hook konteks
-  const { fetchWith402, isLoading, error, API_BASE } = useX402();
 
-  // Kelola state data secara lokal di dalam komponen
+function PremiumContent() {
+  // Hapus isLoading dan error dari hook
+  const { fetchWith402, API_BASE } = useX402();
+
+  // State data
   const [publicData, setPublicData] = useState(null);
   const [premiumData, setPremiumData] = useState(null);
+  
+  // State UI LOKAL
+  const [isPublicLoading, setIsPublicLoading] = useState(false);
+  const [isPremiumLoading, setIsPremiumLoading] = useState(false);
   const [localError, setLocalError] = useState(null);
 
   const handleFetchPublic = async () => {
     setLocalError(null);
-    const data = await fetchWith402(`${API_BASE}/api/public`);
-    if (data) setPublicData(data);
-    if (error) setLocalError(error);
+    setPublicData(null);
+    setIsPublicLoading(true);
+    try {
+      const data = await fetchWith402(`${API_BASE}/api/public`);
+      if (data) setPublicData(data);
+    } catch (err) {
+      setLocalError(err.message);
+    } finally {
+      setIsPublicLoading(false);
+    }
   };
 
   const handleFetchPremium = async () => {
     setLocalError(null);
-    const data = await fetchWith402(`${API_BASE}/api/premium-data`);
-    if (data) setPremiumData(data);
-    if (error) setLocalError(error);
+    setPremiumData(null);
+    setIsPremiumLoading(true);
+    try {
+      const data = await fetchWith402(`${API_BASE}/api/premium-data`);
+      if (data) setPremiumData(data);
+    } catch (err) {
+      setLocalError(err.message);
+    } finally {
+      setIsPremiumLoading(false);
+    }
   };
 
   return (
     <div style={styles.container}>
-      {/* header */}
       <header style={styles.header}>
         <h1 style={styles.headerTitle}>x402 DevTool Demo</h1>
         <WalletMultiButton />
       </header>
 
-      {/* komponen agen */}
       <AgentComponent />
 
-      <hr
-        style={{
-          margin: "30px 0",
-          border: "none",
-          borderBottom: "1px solid #eee",
-        }}
-      />
+      <hr style={{ margin: "30px 0", border: "none", borderBottom: "1px solid #eee" }} />
 
-      {/* grid api */}
       <div style={styles.gridContainer}>
-        {/* api card pub */}
         <div style={styles.apiCard}>
           <h2 style={styles.apiCardTitle}>Public API (Free)</h2>
           <p style={styles.apiCardDescription}>
@@ -145,15 +155,14 @@ function PremiumContent() {
           </p>
           <button
             onClick={handleFetchPublic}
-            disabled={isLoading}
+            disabled={isPublicLoading || isPremiumLoading} // Nonaktifkan jika salah satu loading
             style={{
               ...styles.button,
-              ...(isLoading ? styles.buttonDisabled : {}),
+              ...(isPublicLoading ? styles.buttonDisabled : {}),
             }}
           >
-            {isLoading ? "Loading..." : "Fetch Public Data"}
+            {isPublicLoading ? "Loading..." : "Fetch Public Data"}
           </button>
-
           {publicData && (
             <pre style={styles.preBox}>
               {JSON.stringify(publicData, null, 2)}
@@ -161,7 +170,6 @@ function PremiumContent() {
           )}
         </div>
 
-        {/* api card prem */}
         <div style={styles.apiCard}>
           <h2 style={styles.apiCardTitle}>Premium API (x402 Payment)</h2>
           <p style={styles.apiCardDescription}>
@@ -170,15 +178,14 @@ function PremiumContent() {
           </p>
           <button
             onClick={handleFetchPremium}
-            disabled={isLoading}
+            disabled={isPublicLoading || isPremiumLoading} // Nonaktifkan jika salah satu loading
             style={{
               ...styles.button,
-              ...(isLoading ? styles.buttonDisabled : {}),
+              ...(isPremiumLoading ? styles.buttonDisabled : {}),
             }}
           >
-            {isLoading ? "Membayar & Mengambil..." : "Fetch Premium Data"}
+            {isPremiumLoading ? "Membayar & Mengambil..." : "Fetch Premium Data"}
           </button>
-
           {premiumData && (
             <pre style={{ ...styles.preBox, ...styles.successBox }}>
               {JSON.stringify(premiumData, null, 2)}
@@ -186,7 +193,7 @@ function PremiumContent() {
           )}
         </div>
       </div>
-      {/* Tampilkan error global dari hook */}
+      
       {localError && (
         <div style={styles.errorBox}>
           <strong>Error:</strong> {localError}

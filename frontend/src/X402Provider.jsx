@@ -1,12 +1,11 @@
-// frontend/src/X402Provider.jsx (FIXED)
+// frontend/src/X402Provider.jsx 
 
 import { Buffer } from "buffer";
 import React, {
   createContext,
-  useState,
   useContext,
   useCallback,
-} from "react";
+} from "react"; 
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   PublicKey,
@@ -21,10 +20,7 @@ import {
   getAccount,
 } from "@solana/spl-token";
 
-// Pastikan polyfill buffer global ada (seperti di polyfills.js Anda)
 window.Buffer = Buffer;
-
-// INI YANG SEBELUMNYA ERROR: Menambahkan 'export'
 export const X402Context = createContext(null);
 
 const isWalletError = (error) => {
@@ -36,14 +32,9 @@ const isWalletError = (error) => {
 };
 
 export function X402Provider({ children }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
 
-  /**
-   * Fungsi helper internal untuk membangun dan mengirim transaksi pembayaran
-   */
   const executePayment = useCallback(
     async (invoice, memo) => {
       if (!publicKey || !sendTransaction) {
@@ -72,7 +63,6 @@ export function X402Provider({ children }) {
         recipientWalletPubKey
       );
 
-      // Cek apakah ATA penerima ada, jika tidak tambahkan instruksi
       try {
         await getAccount(connection, recipientTokenAccountAddress);
       } catch (err) {
@@ -87,7 +77,6 @@ export function X402Provider({ children }) {
         );
       }
 
-      // Tambahkan instruksi transfer
       tx.add(
         createTransferInstruction(
           payerTokenAccountAddress,
@@ -97,7 +86,6 @@ export function X402Provider({ children }) {
         )
       );
 
-      // Tambahkan instruksi memo
       tx.add(
         new TransactionInstruction({
           keys: [{ pubkey: payerPubKey, isSigner: true, isWritable: false }],
@@ -106,7 +94,6 @@ export function X402Provider({ children }) {
         })
       );
 
-      // Kirim transaksi
       const { blockhash, lastValidBlockHeight } =
         await connection.getLatestBlockhash();
       tx.recentBlockhash = blockhash;
@@ -124,173 +111,107 @@ export function X402Provider({ children }) {
     [connection, publicKey, sendTransaction]
   );
 
-  /**
-   * Fungsi utama untuk mengambil data yang dilindungi
-   */
   const fetchWith402 = useCallback(
     async (url, options = {}) => {
-      setIsLoading(true);
-      setError(null);
-
       if (!publicKey) {
-        setError("Dompet tidak terhubung.");
-        setIsLoading(false);
-        return null;
+        throw new Error("Dompet tidak terhubung.");
       }
 
-      try {
-        // IMPROVISASI #1: Coba akses dengan header anggaran
-        const headers = new Headers(options.headers || {});
-        headers.append("x402-Payer-Pubkey", publicKey.toBase58());
+      const headers = new Headers(options.headers || {});
+      headers.append("x402-Payer-Pubkey", publicKey.toBase58());
 
-        const res = await fetch(url, { ...options, headers });
+      const res = await fetch(url, { ...options, headers });
 
-        if (res.ok) {
-          // BERHASIL! Dibayar via anggaran atau rute publik
-          console.log("Fetch berhasil (via anggaran atau publik)");
-          const jsonData = await res.json();
-          setIsLoading(false);
-          return jsonData;
-        } else if (res.status === 402) {
-          // PEMBAYARAN DIPERLUKAN (Anggaran habis atau tidak ada)
-          const invoice = await res.json();
-          console.log("Menerima faktur 402:", invoice);
+      if (res.ok) {
+        console.log("Fetch berhasil (via anggaran atau publik)");
+        return res.json(); 
+      } else if (res.status === 402) {
+        const invoice = await res.json();
+        console.log("Menerima faktur 402:", invoice);
 
-          // 1. Bayar
-          const signature = await executePayment(invoice, invoice.reference);
+        const signature = await executePayment(invoice, invoice.reference);
 
-          // 2. Coba lagi (Retry) dengan bukti bayar
-          const separator = url.includes("?") ? "&" : "?";
-          const retryUrl = `${url}${separator}reference=${invoice.reference}`;
-          const finalRes = await fetch(retryUrl, {
-            ...options,
-            headers: {
-              ...options.headers,
-              Authorization: `x402 ${signature}`,
-            },
-          });
+        const separator = url.includes("?") ? "&" : "?";
+        const retryUrl = `${url}${separator}reference=${invoice.reference}`;
+        const finalRes = await fetch(retryUrl, {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `x402 ${signature}`,
+          },
+        });
 
-          if (!finalRes.ok) {
-            const finalError = await finalRes.json();
-            throw new Error(`Verifikasi gagal: ${finalError.error || "Server error"}`);
-          }
-
-          const finalJsonData = await finalRes.json();
-          setIsLoading(false);
-          return finalJsonData;
-        } else {
-            const errorText = await res.text();
-            throw new Error(`HTTP Error: ${res.status} ${res.statusText} - ${errorText}`);
+        if (!finalRes.ok) {
+          const finalError = await finalRes.json();
+          throw new Error(`Verifikasi gagal: ${finalError.error || "Server error"}`);
         }
-      } catch (err) {
-        console.error(err);
-        if (isWalletError(err)) {
-          setError("Transaksi dibatalkan oleh pengguna.");
-        } else {
-          setError(err.message);
-        }
-        setIsLoading(false);
-        return null;
+        return finalRes.json(); 
+      } else {
+        const errorText = await res.text();
+        throw new Error(`HTTP Error: ${res.status} ${res.statusText} - ${errorText}`);
       }
     },
     [publicKey, executePayment]
   );
-  
-  // Ambil API_BASE dari env
+
   const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
-  /**
-   * IMPROVISASI #1: Fungsi untuk menyetor anggaran
-   */
   const depositBudget = useCallback(
     async (invoiceUrl, amount) => {
-      setIsLoading(true);
-      setError(null);
-
       if (!publicKey) {
-        setError("Dompet tidak terhubung.");
-        setIsLoading(false);
-        return null;
+        throw new Error("Dompet tidak terhubung.");
+      }
+      
+      let invoice;
+      const res402 = await fetch(invoiceUrl);
+      if (res402.status !== 402) {
+        const toolsRes = await fetch(`${API_BASE}/api/agent-tools`);
+        const tools = await toolsRes.json();
+        if (!tools || tools.length === 0)
+          throw new Error("Tidak bisa mendapatkan info invoice 402 untuk setoran.");
+        const fallbackRes = await fetch(`${API_BASE}${tools[0].endpoint}`);
+        if (fallbackRes.status !== 402)
+          throw new Error("Gagal mengambil info invoice 402.");
+        invoice = await fallbackRes.json();
+      } else {
+        invoice = await res402.json();
       }
 
-      try {
-        // 1. Dapatkan info invoice
-         const res402 = await fetch(invoiceUrl);
-         
-         // ===============================================
-         // ===== INI ADALAH PERBAIKANNYA (BARIS 209) =====
-         // ===============================================
-         let invoice; 
-         // ===============================================
-         
-         if(res402.status !== 402) {
-            // Coba ambil dari /api/agent-tools jika endpoint pertama tidak 402
-            const toolsRes = await fetch(`${API_BASE}/api/agent-tools`);
-            const tools = await toolsRes.json();
-            if(!tools || tools.length === 0) throw new Error("Tidak bisa mendapatkan info invoice 402 untuk setoran.");
-            // Panggil 402 secara manual
-            const fallbackRes = await fetch(`${API_BASE}${tools[0].endpoint}`);
-            if(fallbackRes.status !== 402) throw new Error("Gagal mengambil info invoice 402.");
-            invoice = await fallbackRes.json();
-         } else {
-            invoice = await res402.json();
-         }
+      const depositInvoice = { ...invoice, amount: amount };
+      const depositReference = `DEPOSIT-${invoice.reference}`;
+      const signature = await executePayment(depositInvoice, depositReference);
 
-
-        // 2. Modifikasi invoice untuk setoran
-        const depositInvoice = {
-          ...invoice,
-          amount: amount, // Gunakan jumlah setoran
-        };
-        const depositReference = `DEPOSIT-${invoice.reference}`; // Memo unik
-
-        // 3. Lakukan pembayaran
-        const signature = await executePayment(depositInvoice, depositReference);
-
-        // 4. Konfirmasi setoran ke backend
-        const confirmRes = await fetch(
-          `${API_BASE}/api/confirm-budget-deposit`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              signature,
-              reference: depositReference,
-              payerPubkey: publicKey.toBase58(),
-              amount: amount,
-            }),
-          }
-        );
-
-        if (!confirmRes.ok) {
-          const confirmError = await confirmRes.json();
-          throw new Error(`Setoran terkirim, tapi konfirmasi backend gagal: ${confirmError.error}`);
+      const confirmRes = await fetch(
+        `${API_BASE}/api/confirm-budget-deposit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signature,
+            reference: depositReference,
+            payerPubkey: publicKey.toBase58(),
+            amount: amount,
+          }),
         }
+      );
 
-        const confirmData = await confirmRes.json();
-        console.log("Setoran anggaran berhasil:", confirmData);
-        setIsLoading(false);
-        return confirmData;
-      } catch (err) {
-        console.error(err); // <-- Ini yang mencetak ReferenceError
-        if (isWalletError(err)) {
-          setError("Transaksi dibatalkan oleh pengguna.");
-        } else {
-          setError(err.message); // <-- Ini yang menyebabkan "null"
-        }
-        setIsLoading(false);
-        return null;
+      if (!confirmRes.ok) {
+        const confirmError = await confirmRes.json();
+        throw new Error(`Setoran terkirim, tapi konfirmasi backend gagal: ${confirmError.error}`);
       }
+      
+      const confirmData = await confirmRes.json();
+      console.log("Setoran anggaran berhasil:", confirmData);
+      return confirmData; 
     },
-    [publicKey, executePayment, API_BASE] 
+    [publicKey, executePayment, API_BASE]
   );
 
   const value = {
-    isLoading,
-    error,
     fetchWith402,
     depositBudget,
     API_BASE,
+    isWalletError, 
   };
 
   return <X402Context.Provider value={value}>{children}</X402Context.Provider>;

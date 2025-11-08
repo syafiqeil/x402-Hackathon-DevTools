@@ -1,8 +1,9 @@
-// frontend/src/AgentComponent.jsx
-import React, { useState, useEffect } from "react";
-import { useX402 } from "./useX402"; // Hook konteks baru kita!
+// frontend/src/AgentComponent.jsx (FIXED)
 
-// (Salin objek `styles` dari file asli Anda)
+import React, { useState, useEffect } from "react";
+import { useX402 } from "./useX402"; 
+
+// ... (Salin 'styles' Anda dari file lama) ...
 const styles = {
   chatBox: {
     border: "1px solid #ccc",
@@ -55,8 +56,18 @@ const styles = {
     width: '60px',
     border: '1px solid #ccc',
     borderRadius: '4px'
-  }
+  },
+  errorBox: { // Tambahkan style ini untuk error lokal
+    backgroundColor: '#fff0f0',
+    border: '1px solid #d99',
+    color: '#d00',
+    padding: '10px',
+    borderRadius: '6px',
+    marginTop: '10px',
+    fontSize: '14px',
+  },
 };
+
 
 export function AgentComponent() {
   const [prompt, setPrompt] = useState("");
@@ -67,17 +78,15 @@ export function AgentComponent() {
     },
   ]);
   const [isThinking, setIsThinking] = useState(false);
-  
-  // IMPROVISASI #3: State untuk menyimpan alat yang ditemukan
   const [availableTools, setAvailableTools] = useState([]);
-  
-  // IMPROVISASI #1: State untuk manajemen anggaran
   const [budgetAmount, setBudgetAmount] = useState(0.01);
+  
+  // State error LOKAL
+  const [localError, setLocalError] = useState(null);
 
   // Ambil fungsi dari konteks
-  const { fetchWith402, depositBudget, isLoading, error, API_BASE } = useX402();
+  const { fetchWith402, depositBudget, isWalletError, API_BASE } = useX402();
 
-  // IMPROVISASI #3: Muat alat yang tersedia saat komponen dimuat
   useEffect(() => {
     const fetchTools = async () => {
       try {
@@ -91,64 +100,55 @@ export function AgentComponent() {
           styles.agentThinking
         );
       } catch (e) {
-        addMessage("agent", `Gagal memuat alat: ${e.message}`, {
-          ...styles.agentMsg,
-          color: "red",
-        });
+        setLocalError(e.message); // Gunakan error lokal
       }
     };
     fetchTools();
-  }, [API_BASE]); // Hanya berjalan sekali
+  }, [API_BASE]);
 
   const addMessage = (from, text, style = {}) => {
     setMessages((prev) => [...prev, { from, text, style }]);
   };
 
-  /**
-   * IMPROVISASI #3: Logika handleSend yang dinamis
-   */
   const handleSend = async () => {
     if (!prompt || isThinking) return;
 
     addMessage("user", prompt, styles.userMsg);
     setPrompt("");
     setIsThinking(true);
+    setLocalError(null); // Bersihkan error
 
     try {
-      // 1. Temukan alat yang cocok
       const normalizedPrompt = prompt.toLowerCase();
       const tool = availableTools.find((t) =>
         normalizedPrompt.includes(t.id)
       );
-
       let answer;
 
       if (tool) {
-        // 2. Alat ditemukan!
         addMessage(
           "agent",
           `Saya menemukan alat "${tool.id}" untuk ini. Biaya ${tool.cost} token. Mencoba mengambil (via anggaran atau 402)...`,
           styles.agentThinking
         );
-
-        // 3. Panggil alat menggunakan fetchWith402
-        // Ini akan secara otomatis menggunakan anggaran JIKA ada,
-        // atau memicu popup 402 JIKA TIDAK.
+        
+        // Tambahkan try...catch di sini
         const result = await fetchWith402(`${API_BASE}${tool.endpoint}`);
-
+        
         if (result && result.context) {
           answer = `Berikut adalah informasi tentang ${tool.id}: ${result.context} (Pembayaran via: ${result.paymentMethod})`;
         } else {
-          // Error sudah ditangani oleh hook, tapi kita tampilkan pesan
-          answer = `Gagal mengambil konteks: ${error || "Error tidak diketahui"}`;
+          // Seharusnya tidak terjadi, karena error akan di-throw
+          answer = `Gagal mengambil konteks: Error tidak diketahui`;
         }
       } else {
         answer = "Maaf, saya tidak menemukan alat yang cocok untuk permintaan itu. Anda bisa bertanya tentang 'tokenomics' atau 'roadmap'.";
       }
-
       addMessage("agent", answer, styles.agentMsg);
     } catch (err) {
-      addMessage("agent", `Error: ${err.message}`, {
+      const errorMsg = isWalletError(err) ? "Transaksi dibatalkan oleh pengguna." : err.message;
+      setLocalError(errorMsg);
+      addMessage("agent", `Error: ${errorMsg}`, {
         ...styles.agentMsg,
         color: "red",
       });
@@ -157,71 +157,85 @@ export function AgentComponent() {
     }
   };
 
-  /**
-   * IMPROVISASI #1: Fungsi untuk menangani setoran anggaran
-   */
   const handleDeposit = async () => {
     if (!budgetAmount || budgetAmount <= 0) {
-        addMessage("agent", "Silakan masukkan jumlah setoran yang valid.", styles.agentMsg);
-        return;
+      setLocalError("Silakan masukkan jumlah setoran yang valid.");
+      return;
     }
-    
+
     setIsThinking(true);
-    addMessage("agent", `Memulai setoran anggaran sebesar ${budgetAmount} token...`, styles.agentThinking);
-    
-    // Kita perlu satu URL invoice untuk mendapatkan detail (penerima, token)
-    // Kita asumsikan semua alat menggunakan detail yang sama
-    const sampleInvoiceUrl = `${API_BASE}${availableTools[0].endpoint}`;
+    setLocalError(null); // Bersihkan error
+    addMessage(
+      "agent",
+      `Memulai setoran anggaran sebesar ${budgetAmount} token...`,
+      styles.agentThinking
+    );
 
-    const result = await depositBudget(sampleInvoiceUrl, budgetAmount);
-
-    if (result && result.success) {
-        addMessage("agent", `Setoran anggaran berhasil! Total anggaran Anda sekarang: ${result.newBudget} token.`, styles.agentMsg);
-    } else {
-        addMessage("agent", `Setoran anggaran gagal: ${error}`, { ...styles.agentMsg, color: 'red' });
+    try {
+      const sampleInvoiceUrl = `${API_BASE}${availableTools[0].endpoint}`;
+      const result = await depositBudget(sampleInvoiceUrl, budgetAmount);
+      
+      if (result && result.success) {
+        addMessage(
+          "agent",
+          `Setoran anggaran berhasil! Total anggaran Anda sekarang: ${result.newBudget} token.`,
+          styles.agentMsg
+        );
+      }
+    } catch (err) {
+      const errorMsg = isWalletError(err) ? "Transaksi dibatalkan oleh pengguna." : err.message;
+      setLocalError(errorMsg);
+      addMessage("agent", `Setoran anggaran gagal: ${errorMsg}`, {
+        ...styles.agentMsg,
+        color: "red",
+      });
+    } finally {
+      setIsThinking(false);
     }
-    setIsThinking(false);
   };
 
   return (
-    <div
-      style={{
+    <div style={/* ... style container ... */{
         border: "1px solid #eaeaea",
         borderRadius: "8px",
         padding: "24px",
         boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
         marginTop: "30px",
-      }}
-    >
-      <h2
-        style={{ margin: "0 0 12px 0", fontSize: "20px", fontWeight: "600" }}
-      >
+      }}>
+      <h2 style={/* ... style h2 ... */{ margin: "0 0 12px 0", fontSize: "20px", fontWeight: "600" }}>
         x402 Agent Otonom (RAG)
       </h2>
-      <p style={{ fontSize: "14px", color: "#555", lineHeight: 1.5 }}>
+      <p style={/* ... style p ... */{ fontSize: "14px", color: "#555", lineHeight: 1.5 }}>
         Agen ini **menemukan alatnya** secara dinamis dan **mengelola anggarannya**
         sendiri. Setor anggaran untuk mengizinkan agen beroperasi tanpa
         meminta persetujuan setiap saat.
       </p>
-      
-      {/* IMPROVISASI #1: Area Setoran Anggaran */}
+
       <div style={styles.budgetArea}>
-        <label htmlFor="budget" style={{fontSize: '14px', fontWeight: '500'}}>Anggaran Agen:</label>
-        <input 
-            type="number"
-            id="budget"
-            style={styles.budgetInput}
-            value={budgetAmount}
-            onChange={(e) => setBudgetAmount(parseFloat(e.target.value))}
-            min="0.001"
-            step="0.001"
+        <label htmlFor="budget" style={{ fontSize: "14px", fontWeight: "500" }}>
+          Anggaran Agen:
+        </label>
+        <input
+          type="number"
+          id="budget"
+          style={styles.budgetInput}
+          value={budgetAmount}
+          onChange={(e) => setBudgetAmount(parseFloat(e.target.value))}
+          min="0.001"
+          step="0.001"
         />
-        <button 
-            onClick={handleDeposit} 
-            disabled={isLoading}
-            style={{...styles.button, width: 'auto', padding: '8px 12px', fontSize: '14px'}}
+        <button
+          onClick={handleDeposit}
+          disabled={isThinking} // Hanya nonaktifkan jika agen sedang berpikir
+          style={{
+            ...styles.button,
+            width: "auto",
+            padding: "8px 12px",
+            fontSize: "14px",
+            ...(isThinking ? styles.buttonDisabled : {})
+          }}
         >
-            {isLoading ? "Memproses..." : "Setor Anggaran"}
+          {isThinking ? "Memproses..." : "Setor Anggaran"}
         </button>
       </div>
 
@@ -231,9 +245,6 @@ export function AgentComponent() {
             {msg.text}
           </div>
         ))}
-        {isLoading && !isThinking && ( // Tampilkan jika loading tapi bukan dari handleSend
-            <div style={{...styles.msg, ...styles.agentThinking}}>Memproses...</div>
-        )}
       </div>
       <div style={{ marginTop: "10px", display: "flex" }}>
         <input
@@ -244,13 +255,17 @@ export function AgentComponent() {
           onKeyPress={(e) => e.key === "Enter" && handleSend()}
           placeholder="Tanya tentang 'tokenomics' atau 'roadmap'"
         />
-        <button onClick={handleSend} style={styles.button} disabled={isThinking || isLoading}>
+        <button
+          onClick={handleSend}
+          style={{...styles.button, ...(isThinking ? styles.buttonDisabled : {})}}
+          disabled={isThinking} // Hanya nonaktifkan jika agen sedang berpikir
+        >
           {isThinking ? "..." : "Kirim"}
         </button>
       </div>
-       {error && (
-        <div style={{...styles.errorBox, marginTop: '10px', padding: '10px'}}>
-          <strong>Error:</strong> {error}
+      {localError && ( // Tampilkan error lokal
+        <div style={styles.errorBox}>
+          <strong>Error:</strong> {localError}
         </div>
       )}
     </div>
