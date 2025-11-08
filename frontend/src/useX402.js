@@ -1,5 +1,6 @@
 // frontend/src/useX402.js 
 
+import { Buffer } from 'buffer';
 import { useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
