@@ -23,7 +23,7 @@ function App() {
         <WalletModalProvider>
           <X402Provider>
             <div className="min-h-screen bg-white text-gray-900">
-              <div className="mx-auto p-4 lg:p-8">
+              <div className="container mx-auto p-4 lg:p-8">
                 
                 <header className="flex justify-between items-center gap-6 pb-4 mb-6 border-b border-gray-200">
                   <h1 className="text-2xl lg:text-4xl font-bold">x402 DevTools</h1>
