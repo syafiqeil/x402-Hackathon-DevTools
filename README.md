@@ -32,7 +32,7 @@ Apply the x402Paywall middleware to any route you want to monetize.
 
 Example in server.js:
 
-const express = require("express");
+`const express = require("express");
 const { x402Paywall } = require("./x402-paywall");
 const app = express();
 
@@ -73,7 +73,7 @@ app.get(
   }
 );
 
-module.exports = app;
+module.exports = app;`
 
 2. Frontend (Accessing Protected Routes in React)
 
