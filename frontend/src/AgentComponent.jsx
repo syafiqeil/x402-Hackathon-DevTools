@@ -1,221 +1,208 @@
-// frontend/src/AgentComponent.jsx
+// frontend/src/AgentComponent.jsx (TAILWIND & ENGLISH)
+
 import React, { useState, useEffect } from "react";
-import { useX402 } from "./useX402";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useX402 } from "./useX402"; 
 
-// Receive a prop to optionally show the wallet button
-function AgentComponent({ showWalletButton }) {
-  const { 
-    fetchWith402, 
-    depositBudget, 
-    API_BASE, 
-    isWalletConnected, 
-    isWalletError, 
-    publicKey 
-  } = useX402();
+export function AgentComponent() {
+  const [prompt, setPrompt] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      from: "agent",
+      text: "Hello! I am an autonomous RAG agent. I can find tools to answer your questions.",
+    },
+  ]);
+  const [isThinking, setIsThinking] = useState(false);
+  const [availableTools, setAvailableTools] = useState([]);
+  const [budgetAmount, setBudgetAmount] = useState(0.01);
+  const [localError, setLocalError] = useState(null);
 
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [premiumData, setPremiumData] = useState(null);
-  const [freeData, setFreeData] = useState(null);
-  const [agentBudget, setAgentBudget] = useState(0.01); // Default budget
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Function to fetch current budget from the backend
-  const fetchCurrentBudget = async () => {
-    if (!publicKey) return;
-    try {
-      const response = await fetch(`${API_BASE}/api/get-current-budget?payerPubkey=${publicKey.toString()}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Update local state with the actual budget from backend
-        // Assuming the backend returns budget in lamports, convert to SOL/USDC
-        setAgentBudget(parseFloat(data.currentBudget) / Math.pow(10, 8)); // Adjust for decimals
-      }
-    } catch (err) {
-      console.error("Failed to fetch current budget:", err);
-    }
-  };
+  const { fetchWith402, depositBudget, isWalletError, API_BASE } = useX402();
 
   useEffect(() => {
-    if (isWalletConnected && publicKey) {
-      fetchCurrentBudget();
-    }
-  }, [isWalletConnected, publicKey]);
+    const fetchTools = async () => {
+      try {
+        const tools = await fetch(`${API_BASE}/api/agent-tools`).then((res) =>
+          res.json()
+        );
+        setAvailableTools(tools);
+        addMessage(
+          "agent-info",
+          `I have loaded ${tools.length} tools available for me to use (e.g., "tokenomics", "roadmap").`
+        );
+      } catch (e) {
+        setLocalError(e.message);
+      }
+    };
+    fetchTools();
+  }, [API_BASE]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || !isWalletConnected) return;
+  const addMessage = (from, text) => {
+    setMessages((prev) => [...prev, { from, text }]);
+  };
 
-    setLoading(true);
-    setError(null);
-    const newMessage = { sender: "user", text: input };
-    setMessages((prev) => [...prev, newMessage]);
-    setInput("");
+  const handleSend = async () => {
+    if (!prompt || isThinking) return;
+
+    addMessage("user", prompt);
+    const userPrompt = prompt;
+    setPrompt("");
+    setIsThinking(true);
+    setLocalError(null);
 
     try {
-      // Simulate agent thinking and using a premium tool
-      const agentThinkingMessage = { sender: "agent", text: "Agent thinking... fetching premium data if needed." };
-      setMessages((prev) => [...prev, agentThinkingMessage]);
+      const normalizedPrompt = userPrompt.toLowerCase();
+      const tool = availableTools.find((t) =>
+        normalizedPrompt.includes(t.id)
+      );
+      let answer;
 
-      const result = await fetchWith402(`${API_BASE}/api/rag-agent-tool`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: input }),
-      });
-      
-      const agentResponse = { sender: "agent", text: result.response || "No response from agent." };
-      setMessages((prev) => [...prev, agentResponse]);
-      setPremiumData(result); // Store for debugging/display
-      fetchCurrentBudget(); // Refresh budget after agent uses it
-
-    } catch (err) {
-      if (isWalletError(err)) {
-        setError("Transaction cancelled by user.");
+      if (tool) {
+        addMessage(
+          "agent-thinking",
+          `Found tool "${tool.id}". Cost: ${tool.cost} tokens. Attempting fetch (via budget or 402)...`
+        );
+        
+        const result = await fetchWith402(`${API_BASE}${tool.endpoint}`);
+        
+        if (result && result.context) {
+          answer = `Here is the info on ${tool.id}: ${result.context} (Payment via: ${result.paymentMethod})`;
+        } else {
+          answer = `Failed to retrieve context: Unknown error`;
+        }
       } else {
-        setError(`Error: ${err.message}`);
+        answer = "Sorry, I couldn't find a tool for that request. You can ask about 'tokenomics' or 'roadmap'.";
       }
-      setMessages((prev) => [...prev, { sender: "agent", text: `Error processing your request: ${err.message}` }]);
+      addMessage("agent", answer);
+    } catch (err) {
+      const errorMsg = isWalletError(err) ? "Transaction cancelled by user." : err.message;
+      setLocalError(errorMsg);
+      addMessage("agent-error", `Error: ${errorMsg}`);
     } finally {
-      setLoading(false);
+      setIsThinking(false);
     }
   };
 
-  const handleDepositBudget = async () => {
-    if (!isWalletConnected || loading) return;
+  const handleDeposit = async () => {
+    if (!budgetAmount || budgetAmount <= 0) {
+      setLocalError("Please enter a valid deposit amount.");
+      return;
+    }
 
-    setLoading(true);
-    setError(null);
+    setIsThinking(true);
+    setLocalError(null);
+    addMessage(
+      "agent-thinking",
+      `Initiating budget deposit of ${budgetAmount} tokens...`
+    );
+
     try {
-      // Use a dummy premium endpoint to get the invoice details
-      const dummyInvoiceUrl = `${API_BASE}/api/rag-agent-tool`; 
-      const result = await depositBudget(dummyInvoiceUrl, agentBudget);
-      alert(`Deposit successful! New budget: ${parseFloat(result.newBudget) / Math.pow(10, 8)} tokens.`);
-      fetchCurrentBudget(); // Refresh budget after deposit
-    } catch (err) {
-      setError(`Deposit failed: ${err.message}`);
-      if (isWalletError(err)) {
-        setError("Deposit transaction cancelled by user.");
+      const sampleInvoiceUrl = `${API_BASE}${availableTools[0].endpoint}`;
+      const result = await depositBudget(sampleInvoiceUrl, budgetAmount);
+      
+      if (result && result.success) {
+        addMessage(
+          "agent-info",
+          `Budget deposit successful! Your new total budget is: ${result.newBudget} tokens.`
+        );
       }
+    } catch (err) {
+      const errorMsg = isWalletError(err) ? "Transaction cancelled by user." : err.message;
+      setLocalError(errorMsg);
+      addMessage("agent-error", `Deposit failed: ${errorMsg}`);
     } finally {
-      setLoading(false);
+      setIsThinking(false);
     }
   };
 
-  const handleFetchFreeData = async () => {
-    if (loading) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE}/api/free-data`);
-      if (!response.ok) throw new Error("Failed to fetch free data");
-      const data = await response.json();
-      setFreeData(data);
-    } catch (err) {
-      setError(`Error fetching free data: ${err.message}`);
-    } finally {
-      setLoading(false);
+  const getMessageStyle = (from) => {
+    switch (from) {
+      case 'user':
+        return 'bg-blue-100 text-blue-900 text-right ml-auto';
+      case 'agent':
+        return 'bg-gray-100 text-gray-900';
+      case 'agent-thinking':
+        return 'bg-yellow-50 text-yellow-700 italic';
+      case 'agent-info':
+        return 'bg-green-50 text-green-700';
+      case 'agent-error':
+        return 'bg-red-50 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-900';
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md w-full">
-      {/* WalletMultiButton - Render conditionally */}
-      {showWalletButton && (
-        <div className="mb-4">
-          <WalletMultiButton />
-        </div>
-      )}
-
-      {/* Autonomous Agent Section */}
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Autonomous Agent (RAG)</h2>
+    <div className="border border-gray-200 rounded-lg shadow p-6 bg-white">
+      <h2 className="text-xl font-semibold mb-3">
+        x402 Autonomous Agent (RAG)
+      </h2>
       <p className="text-sm text-gray-600 mb-4">
-        This agent "finds" and "manages its budget" dynamically. Deposit funds to enable the agent to operate without requiring explicit approval for every single action.
+        This agent dynamically **finds its tools** and **manages its budget**.
+        Deposit a budget to allow the agent to operate without prompting you
+        for every micro-payment.
       </p>
 
-      {/* Budget Control */}
-      <div className="flex items-center space-x-2 mb-6">
-        <label htmlFor="agentBudget" className="text-gray-700 whitespace-nowrap">Agent Budget:</label>
+      {/* Area Setor Anggaran */}
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg flex flex-wrap items-center gap-4">
+        <label htmlFor="budget" className="text-sm font-medium text-gray-700">
+          Agent Budget:
+        </label>
         <input
-          id="agentBudget"
           type="number"
-          step="0.01"
-          value={agentBudget}
-          onChange={(e) => setAgentBudget(parseFloat(e.target.value))}
-          className="p-2 border border-gray-300 rounded-md w-24"
+          id="budget"
+          value={budgetAmount}
+          onChange={(e) => setBudgetAmount(parseFloat(e.target.value) || 0)}
+          min="0.001"
+          step="0.001"
+          className="w-24 px-2 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm"
         />
         <button
-          onClick={handleDepositBudget}
-          disabled={!isWalletConnected || loading}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
+          onClick={handleDeposit}
+          disabled={isThinking}
+          className="bg-indigo-600 text-white font-semibold text-sm py-2 px-4 rounded-lg hover:bg-indigo-500 disabled:opacity-50 transition-colors"
         >
-          {loading ? "Depositing..." : "Deposit Budget"}
+          {isThinking ? "Processing..." : "Deposit Budget"}
         </button>
       </div>
 
-      {/* Agent Chat */}
-      <div className="border border-gray-300 rounded-md p-4 bg-gray-50 h-64 overflow-y-auto mb-4 text-sm">
-        {messages.length === 0 ? (
-          <p className="text-gray-500">
-            Hello! I am an autonomous RAG agent. I can find tools to answer your questions.
-          </p>
-        ) : (
-          messages.map((msg, index) => (
-            <p key={index} className={msg.sender === "user" ? "text-blue-700" : "text-gray-800"}>
-              <strong>{msg.sender === "user" ? "You" : "Agent"}:</strong> {msg.text}
-            </p>
-          ))
-        )}
+      {/* Kotak Obrolan */}
+      <div className="mt-4 border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto bg-gray-50 space-y-3">
+        {messages.map((msg, i) => (
+          <div 
+            key={i} 
+            className={`p-3 rounded-lg text-sm max-w-[85%] ${getMessageStyle(msg.from)}`}
+          >
+            {msg.text}
+          </div>
+        ))}
       </div>
 
-      <form onSubmit={handleSendMessage} className="flex space-x-2 mb-6">
+      {/* Input Pengguna */}
+      <div className="mt-4 flex gap-3">
         <input
           type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && handleSend()}
           placeholder="Ask about 'tokenomics' or 'roadmap'"
-          className="flex-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          disabled={!isWalletConnected || loading}
+          className="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
-          type="submit"
-          disabled={!isWalletConnected || loading}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
+          onClick={handleSend}
+          style={{...styles.button, ...(isThinking ? styles.buttonDisabled : {})}}
+          disabled={isThinking}
+          className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
         >
-          {loading ? "Sending..." : "Send"}
+          {isThinking ? "..." : "Send"}
         </button>
-      </form>
+      </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
-        </div>
-      )}
-
-      {/* Public API (Free) Section */}
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 mt-8">Public API (Free)</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        This endpoint demonstrates free access without any payment.
-      </p>
-      <button
-        onClick={handleFetchFreeData}
-        disabled={loading}
-        className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
-      >
-        {loading ? "Fetching..." : "Fetch Free Data"}
-      </button>
-
-      {freeData && (
-        <div className="mt-4 bg-gray-100 p-3 rounded-md text-sm">
-          <h3 className="font-semibold mb-2">Free Data Response:</h3>
-          <pre className="whitespace-pre-wrap">{JSON.stringify(freeData, null, 2)}</pre>
+      {/* Kotak Error Lokal */}
+      {localError && (
+        <div className="mt-4 bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-sm">
+          <strong>Error:</strong> {localError}
         </div>
       )}
     </div>
   );
 }
-
-export default AgentComponent;

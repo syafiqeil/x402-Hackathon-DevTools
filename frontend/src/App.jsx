@@ -1,19 +1,19 @@
 // frontend/src/App.jsx
 
 import React, { useMemo } from "react";
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import {
+  ConnectionProvider,
+  WalletProvider,
+} from "@solana/wallet-adapter-react";
+import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
-import "@solana/wallet-adapter-react-ui/styles.css";
-
+import PremiumContent from "./PremiumContent.jsx";
 import { X402Provider } from "./X402Provider.jsx";
-import AgentComponent from "./AgentComponent.jsx"; 
 
 function App() {
-  // Use 'devnet' for development
-  const endpoint = useMemo(() => clusterApiUrl("devnet"), []);
-  // Specify the wallets you want to support
+  const solanaNetwork = "devnet";
+  const endpoint = useMemo(() => clusterApiUrl(solanaNetwork), [solanaNetwork]);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (
@@ -21,38 +21,54 @@ function App() {
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           <X402Provider>
-            <div className="min-h-screen bg-gray-100 p-4">
-              <div className="flex flex-col lg:flex-row lg:space-x-8 max-w-7xl mx-auto">
-                <div className="flex-1 lg:w-1/2 flex flex-col items-start lg:items-start lg:pr-4"> 
-                  <div className="w-full"> 
-                    <div className="flex items-center justify-between lg:justify-start lg:space-x-4 mb-6">
-                      <h1 className="text-2xl font-bold text-gray-800">x402 DevTool Demo</h1>
-                      <div className="lg:hidden"> 
-                          <div className="wallet-button-container">
-                            <AgentComponent showWalletButton={true} /> 
-                          </div>
-                      </div>
-                    </div>
+            <div className="min-h-screen bg-white text-gray-900">
+              <div className="container mx-auto max-w-7xl p-4 lg:p-8">
+                
+                <header className="flex lg:hidden justify-between items-center pb-4 mb-4 border-b border-gray-200">
+                  <h1 className="text-2xl font-bold">x402 DevTools</h1>
+                  <WalletMultiButton />
+                </header>
 
-                    <div className="w-full">
-                      <AgentComponent showWalletButton={false} /> 
+                <div className="flex flex-col lg:flex-row lg:space-x-8">
+                  
+                  <div className="w-full lg:w-1/2 flex-shrink-0">
+                    
+                    <header className="hidden lg:flex justify-between items-center pb-4 mb-6">
+                      <h1 className="text-3xl font-bold">x402 DevTools</h1>
+                      <WalletMultiButton />
+                    </header>
+                    
+                    <PremiumContent />
+                  </div>
+
+                  <div className="hidden lg:block w-px bg-gray-200"></div>
+
+                  <div className="w-full lg:w-1/2 mt-8 lg:mt-0 lg:pt-20 lg:pl-8">
+                    <div className="sticky top-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                      <h2 className="text-2xl font-semibold mb-4">Developer Tool</h2>
+                      <p className="text-gray-600 leading-relaxed mb-4">
+                        This demo showcases the full-stack implementation of the **HTTP 402 Paywall** protocol for Solana.
+                      </p>
+                      <p className="text-gray-600 leading-relaxed mb-2">
+                        It provides a reusable developer toolkit:
+                      </p>
+                      <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
+                        <li>
+                          <strong className="text-gray-800">`x402Paywall` (Backend):</strong> An Express.js middleware to protect API routes.
+                        </li>
+                        <li>
+                          <strong className="text-gray-800">`useX402` (Frontend):</strong> A React hook that handles the entire 402 payment and verification flow.
+                        </li>
+                        <li>
+                          <strong className="text-gray-800">Budget System:</strong> An innovative "deposit" flow to pre-fund autonomous agents, eliminating repeated transaction prompts.
+                        </li>
+                      </ul>
+                      <p className="text-gray-600 leading-relaxed">
+                        The **Autonomous Agent** on the left uses these tools. Try depositing a budget, then ask it a question to see it pay for its own data instantly, without a wallet pop-up.
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                <div className="hidden lg:block w-px bg-gray-300 my-4"></div> 
-
-                <div className="flex-1 lg:w-1/2 flex flex-col items-start lg:pl-4 mt-8 lg:mt-0"> 
-                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Developer Tools</h2>
-                  <p className="text-gray-600 leading-relaxed">
-                    This demonstration showcases the power and flexibility of the x402 DevTools for Solana. It provides a full-stack implementation of the HTTP 402 paywall protocol, allowing developers to easily monetize their APIs using SPL Tokens.
-                  </p>
-                  <p className="text-gray-600 leading-relaxed mt-2">
-                    Key features include an Express.js middleware for backend integration, a convenient React hook for frontend payments, and an innovative budget system that eliminates repeated wallet confirmations for autonomous agents.
-                  </p>
-                  <p className="text-gray-600 leading-relaxed mt-2">
-                    Explore the live demo, review the code, and integrate these powerful tools into your Solana dApps.
-                  </p>
                 </div>
               </div>
             </div>

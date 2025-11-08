@@ -1,109 +1,18 @@
-// frontend/src/PremiumContent.jsx (FIXED)
+// frontend/src/PremiumContent.jsx 
 
-import React, { useState } from "react"; // Impor useState
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import React, { useState } from "react";
+import "@solana/wallet-adapter-react-ui/styles.css";
 import { useX402 } from "./useX402";
 import { AgentComponent } from "./AgentComponent";
 
-// ... (Salin 'styles' Anda dari file lama) ...
-const styles = {
-  container: {
-    fontFamily: "Arial, sans-serif",
-    maxWidth: "600px",
-    margin: "0 auto",
-    padding: "20px",
-    color: "#333",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: "20px",
-    borderBottom: "1px solid #eaeaea",
-  },
-  headerTitle: {
-    margin: 0,
-    fontSize: "24px",
-    fontWeight: "600",
-  },
-  gridContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: "24px",
-    marginTop: "30px",
-  },
-  apiCard: {
-    border: "1px solid #eaeaea",
-    borderRadius: "8px",
-    padding: "24px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
-    display: "flex",
-    flexDirection: "column",
-  },
-  apiCardTitle: {
-    margin: "0 0 12px 0",
-    fontSize: "20px",
-    fontWeight: "600",
-  },
-  apiCardDescription: {
-    fontSize: "14px",
-    color: "#555",
-    lineHeight: 1.5,
-    minHeight: "84px",
-  },
-  button: {
-    marginTop: "auto",
-    width: "100%",
-    padding: "12px",
-    fontSize: "16px",
-    fontWeight: "500",
-    cursor: "pointer",
-    backgroundColor: "#007bff",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    transition: "background-color 0.2s",
-  },
-  buttonDisabled: {
-    backgroundColor: "#c0c0c0",
-    cursor: "not-allowed",
-  },
-  preBox: {
-    backgroundColor: "#f4f4f4",
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    padding: "16px",
-    overflowX: "auto",
-    marginTop: "20px",
-    fontSize: "13px",
-    lineHeight: 1.6,
-  },
-  errorBox: {
-    backgroundColor: "#fff0f0",
-    border: "1px solid #d99",
-    color: "#d00",
-    padding: "16px",
-    borderRadius: "6px",
-    marginTop: "20px",
-    fontSize: "14px",
-  },
-  successBox: {
-    backgroundColor: "#f0fff0",
-    border: "1px solid #9d9",
-    color: "#0a6c0a",
-  },
-};
-
-
 function PremiumContent() {
-  // Hapus isLoading dan error dari hook
   const { fetchWith402, API_BASE } = useX402();
 
-  // State data
+  // State untuk data API
   const [publicData, setPublicData] = useState(null);
   const [premiumData, setPremiumData] = useState(null);
   
-  // State UI LOKAL
+  // State UI Lokal
   const [isPublicLoading, setIsPublicLoading] = useState(false);
   const [isPremiumLoading, setIsPremiumLoading] = useState(false);
   const [localError, setLocalError] = useState(null);
@@ -136,66 +45,63 @@ function PremiumContent() {
     }
   };
 
-  return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.headerTitle}>x402 DevTool Demo</h1>
-        <WalletMultiButton />
-      </header>
+  const isLoading = isPublicLoading || isPremiumLoading;
 
+  return (
+    <div className="w-full">
+      {/* 1. Komponen Agen */}
       <AgentComponent />
 
-      <hr style={{ margin: "30px 0", border: "none", borderBottom: "1px solid #eee" }} />
+      {/* Pemisah */}
+      <hr className="my-8 border-gray-200" />
 
-      <div style={styles.gridContainer}>
-        <div style={styles.apiCard}>
-          <h2 style={styles.apiCardTitle}>Public API (Free)</h2>
-          <p style={styles.apiCardDescription}>
-            Endpoint ini mendemonstrasikan akses gratis tanpa pembayaran.
+      {/* 2. Grid API Publik/Premium */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Kartu API Publik */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col">
+          <h2 className="text-xl font-semibold mb-3">Public API (Free)</h2>
+          <p className="text-gray-600 text-sm mb-4 min-h-[40px]">
+            This endpoint demonstrates free access without any payment.
           </p>
           <button
             onClick={handleFetchPublic}
-            disabled={isPublicLoading || isPremiumLoading} // Nonaktifkan jika salah satu loading
-            style={{
-              ...styles.button,
-              ...(isPublicLoading ? styles.buttonDisabled : {}),
-            }}
+            disabled={isLoading}
+            className="mt-auto w-full bg-gray-800 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
           >
             {isPublicLoading ? "Loading..." : "Fetch Public Data"}
           </button>
           {publicData && (
-            <pre style={styles.preBox}>
+            <pre className="mt-4 bg-gray-100 p-3 rounded text-xs overflow-x-auto">
               {JSON.stringify(publicData, null, 2)}
             </pre>
           )}
         </div>
 
-        <div style={styles.apiCard}>
-          <h2 style={styles.apiCardTitle}>Premium API (x402 Payment)</h2>
-          <p style={styles.apiCardDescription}>
-            Endpoint ini dilindungi. Coba dulu dengan Anggaran Agen, jika gagal
-            atau kosong, ia akan memicu 402 popup.
+        {/* Kartu API Premium */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col">
+          <h2 className="text-xl font-semibold mb-3">Premium API (x402)</h2>
+          <p className="text-gray-600 text-sm mb-4 min-h-[40px]">
+            This endpoint is protected. It will use the Agent Budget first, or trigger a 402 popup.
           </p>
           <button
             onClick={handleFetchPremium}
-            disabled={isPublicLoading || isPremiumLoading} // Nonaktifkan jika salah satu loading
-            style={{
-              ...styles.button,
-              ...(isPremiumLoading ? styles.buttonDisabled : {}),
-            }}
+            disabled={isLoading}
+            className="mt-auto w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
           >
-            {isPremiumLoading ? "Membayar & Mengambil..." : "Fetch Premium Data"}
+            {isPremiumLoading ? "Paying & Fetching..." : "Fetch Premium Data (0.01)"}
           </button>
           {premiumData && (
-            <pre style={{ ...styles.preBox, ...styles.successBox }}>
+            <pre className="mt-4 bg-green-50 border border-green-200 text-green-800 p-3 rounded text-xs overflow-x-auto">
               {JSON.stringify(premiumData, null, 2)}
             </pre>
           )}
         </div>
       </div>
       
+      {/* Global Error Box */}
       {localError && (
-        <div style={styles.errorBox}>
+        <div className="mt-6 bg-red-50 border border-red-300 text-red-700 p-4 rounded-lg text-sm">
           <strong>Error:</strong> {localError}
         </div>
       )}
