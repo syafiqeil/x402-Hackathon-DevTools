@@ -1,28 +1,35 @@
 # x402 DevTools for Solana
 
-This project is a full-stack implementation of the **HTTP 402** paywall protocol adapted for Solana.
+This project is a full-stack implementation of the **HTTP 402** paywall protocol adapted for Solana. It provides a set of tools (SDK) for developers to easily monetize their APIs using **SPL Tokens** on the Solana network—without requiring API keys, user accounts, or subscriptions.
 
-It provides a set of tools (SDK) for developers to easily monetize their APIs using **SPL Tokens** on the Solana network—without requiring API keys, user accounts, or subscriptions.
+This project fits two hackathon tracks:
+1.  **x402 Developer Tool - SDKs, infra, libraries**: We built a reusable `x402Paywall` middleware and a `useX402` React hook.
+2.  **x402 Agent Application - real AI agent use cases**: We created a RAG (Retrieval-Augmented Generation) AI agent that autonomously uses the `useX402` hook to pay for the context it needs to answer user questions.
+
+## 📺 Live Demo
+
+* **Frontend (RAG Agent Demo App):** `https://x402-hackathon-devtools-fe.vercel.app/`
+* **Backend (API Server):** `https://x402-hackathon-devtools.vercel.app/`
 
 ## 📦 Main Components (SDK)
 
 This toolkit consists of two main parts:
 
-1. **Backend (`x402Paywall`)** An Express.js middleware (`x402-paywall.js`) that can be attached to any API route to protect it with a Solana-based paywall.
-2. **Frontend (`useX402`)** A custom React hook (`useX402.js`) that handles the client-side payment flow—from receiving the 402 challenge to sending the transaction and submitting the proof of payment.
+1.  **Backend (`x402Paywall`)**: An Express.js middleware (`x402-paywall.js`) that can be attached to any API route to protect it with a Solana-based paywall.
+2.  **Frontend (`useX402`)**: A custom React hook (`useX402.js`) that handles the client-side payment flow—from receiving the 402 challenge to sending the transaction and submitting the proof of payment.
 
 ## ⚙️ Workflow
 
 This implementation uses a **“Client Pays, Server Verifies”** flow optimized for Solana:
 
-1. **Challenge:** The client (frontend) requests `/api/premium-data`. The server (backend) responds with `HTTP 402 Payment Required` and a JSON “invoice.”
-2. **Payment:** The `useX402 hook` receives the invoice, builds an SPL Token transaction (including a Memo with a unique reference), and requests user wallet approval.
-3. **Proof of Payment:** After the transaction is confirmed on-chain, the `useX402` hook retries the request to `/api/premium-data`, this time including the header: `Authorization: x402 <transaction_signature>`
-4. **Verification:** The `x402Paywall` middleware receives the signature, fetches the transaction details from the Solana RPC, validates the paid amount and memo reference, and then grants access to the premium data.
+1.  **Challenge:** The client (frontend) requests `/api/premium-data`. The server (backend) responds with `HTTP 402 Payment Required` and a JSON “invoice.”
+2.  **Payment:** The `useX402` hook receives the invoice, builds an SPL Token transaction (including a Memo with a unique reference), and requests user wallet approval.
+3.  **Proof of Payment:** After the transaction is confirmed on-chain, the `useX402` hook retries the request to `/api/premium-data`, this time including the header: `Authorization: x402 <transaction_signature>`
+4.  **Verification:** The `x402Paywall` middleware receives the signature, fetches the transaction details from the Solana RPC, validates the paid amount and memo reference, and then grants access to the premium data.
 
 ## 🚀 How to Use
 
-**1. Backend (Protecting Express Routes)**
+### 1. Backend (Protecting Express Routes)
 
 Apply the `x402Paywall` middleware to any route you want to monetize.
 
@@ -56,20 +63,6 @@ Example in `server.js`:
         res.json({ message: "This is premium data!" });
       }
     );
-    
-    // Super-premium route (0.5 Token)
-    app.get(
-      "/api/super-premium",
-      x402Paywall({
-        amount: 0.5,
-        ...config,
-      }),
-      (req, res) => {
-        res.json({ message: "This is super premium data!" });
-      }
-    );
-    
-    module.exports = app;
 
 **2. Frontend (Accessing Protected Routes in React)**
 
