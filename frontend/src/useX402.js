@@ -400,7 +400,9 @@ export function useX402(url) {
         }
 
         // 5. coba lagi (retry) dengan bukti bayar
-        const retryUrl = `${url}?reference=${invoice.reference}`;
+        const separator = url.includes('?') ? '&' : '?';
+        const retryUrl = `${url}${separator}reference=${invoice.reference}`;
+        
         const finalRes = await fetch(retryUrl, {
           headers: {
             Authorization: `x402 ${signature}`,
