@@ -83,7 +83,7 @@ export function AgentComponent() {
         docId = 'roadmap';
       }
 
-      let answer = "Maaf, saya tidak tahu jawabannya.";
+      let answer = "You just can ask one of the two question bro";
 
       if (docId) {
         addMessage('agent', `Saya perlu mengambil dokumen "${docId}". Ini memerlukan pembayaran 0.005 Token...`, styles.agentThinking);

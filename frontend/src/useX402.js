@@ -346,9 +346,9 @@ export function useX402(url) {
           try {
             await connection.confirmTransaction(
               { signature, blockhash, lastValidBlockHeight },
-              "confirmed"
+              "finalized"
             );
-            console.log("Transaksi dikonfirmasi:", signature);
+            console.log("Transaksi di-finalisasi:", signature);
           } catch (confirmError) {
             console.error("Error saat konfirmasi transaksi:", confirmError);
             // cek apakah transaksi benar-benar gagal atau hanya timeout

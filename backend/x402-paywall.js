@@ -73,7 +73,10 @@ function x402Paywall({ amount, splToken, recipientWallet }) {
 
         console.log(`Verifikasi pembayaran: sig=${signature}, ref=${reference}`);
 
-        const tx = await connection.getParsedTransaction(signature, "confirmed");
+        const tx = await connection.getParsedTransaction(
+          signature, 
+          "finalized" 
+        );
 
         if (!tx) {
           return res.status(401).json({ error: "Transaksi tidak ditemukan" });
