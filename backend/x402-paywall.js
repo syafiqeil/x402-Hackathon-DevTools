@@ -83,7 +83,7 @@ function x402Paywall(amount) {
         const memoInstruction = tx.transaction.message.instructions?.find(
           (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         );
-        const memo = memoInstruction ? Buffer.from(memoInstruction.data).toString('utf-8') : null;
+        const memo = memoInstruction ? memoInstruction.parsed : null;
         
         // 1. Dapatkan info mint untuk desimal
         let decimals;
