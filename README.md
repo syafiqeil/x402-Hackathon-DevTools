@@ -73,7 +73,7 @@ Example in `server.js`:
 
 **2. Frontend (Accessing Protected Routes in React)**
 
-Use the `useX402` hook to wrap your API calls.
+Use the `useX402` hook to wrap your API calls. The hook handles all 402 payment logic automatically.
 
 Example in `PremiumContent.jsx`:
 
@@ -82,40 +82,44 @@ Example in `PremiumContent.jsx`:
     
     function PremiumContent() {
       // Initialize the hook for the protected route
-      const premiumApi = useX402("https://YOUR_BACKEND_URL/api/premium-data");
+      const premiumApi = useX402("https://.../api/premium-data");
     
       return (
         <div>
           <h2>Test Premium API (Requires 0.01 Token)</h2>
-    
           {/* Trigger fetchData() when button is clicked */}
           <button onClick={premiumApi.fetchData} disabled={premiumApi.isLoading}>
             {premiumApi.isLoading ? "Paying & Fetching..." : "Fetch Premium Data"}
           </button>
     
           {/* Display error if any */}
-          {premiumApi.error && (
-            <p style={{ color: "red" }}>Error: {premiumApi.error}</p>
-          )}
-    
+          {premiumApi.error && <p>Error: {premiumApi.error}</p>}
+          
           {/* Display data if successful */}
-          {premiumApi.data && (
-            <pre>{JSON.stringify(premiumApi.data, null, 2)}</pre>
-          )}
+          {premiumApi.data && <pre>{JSON.stringify(premiumApi.data)}</pre>}
         </div>
       );
     }
 
+## 🤖 Demo Spotlight: RAG Agent (Agent Application)
+
+The primary demo is the **RAG Agent** (`AgentComponent.jsx`).
+
+When you ask the agent, e.g., "what is tokenomics?", the agent will:
+
+1. Determine it needs to fetch the "tokenomics" document.
+2. Autonomously call useX402 for the `/api/get-context?docId=tokenomics` endpoint.
+3. The `useX402` hook triggers the 402 payment flow, prompting you to approve a 0.005 Token transaction.
+4. Once payment is verified, the agent receives the context and answers your question.
+
+This demonstrates an _agent-to-tool_ use case where an AI agent can independently interact with paid APIs using Solana micropayments.
+
 ## 🛠️ Environment Configuration
 
-To run this project, you need the following environment variables in your backend `.env` file (or in Vercel):
-    
-    * Mint address of the SPL Token you want to accept (e.g., USDC on devnet)**
-    SPL_TOKEN_MINT="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
-    
-    * Your Solana wallet address to receive payments**
-    MY_WALLET_ADDRESS="YourWalletAddressHere"
-    
-    * (Required for Production) Vercel KV credentials for Replay Attack protection**
-    KV_REST_API_URL="https://..."
-    KV_REST_API_TOKEN="ey..."
+To run this project, you'll need a .env file in the backend (or in Vercel). The variables used in the live demo are:
+
+    * **SPL Token Mint Address (USDC Devnet)** SPL_TOKEN_MINT="Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+    * **Your Solana wallet address to receive payments** MY_WALLET_ADDRESS="6DBM36PKEjNmheZyJbGz12Gt7J2ch8YrooZTjWAc5xkE"
+    * **(Optional) Vercel KV credentials for Replay Attack Protection** KV_REST_API_URL="..." KV_REST_API_TOKEN="..."
+
+_(Note: If KV is not configured, the backend defaults to a simple in-memory store for replay protection, which is sufficient for demo purposes)_
