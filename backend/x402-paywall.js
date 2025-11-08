@@ -105,8 +105,8 @@ function x402Paywall(amount) {
         );
 
         // 3. Hitung jumlah yang diterima
-        const preAmount = preBalance ? BigInt(preBalance.uiTokenAmount.amount) : 0n;
-        const postAmount = postBalance ? BigInt(postBalance.uiTokenAmount.amount) : 0n;
+        const preAmount = BigInt(preBalance?.uiTokenAmount?.amount || '0');
+        const postAmount = BigInt(postBalance?.uiTokenAmount?.amount || '0');
         const amountReceived = postAmount - preAmount;
 
         console.log(`Verifikasi Saldo: Owner ${RECIPIENT_OWNER_STR}, Saldo Awal: ${preAmount}, Saldo Akhir: ${postAmount}, Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`);
