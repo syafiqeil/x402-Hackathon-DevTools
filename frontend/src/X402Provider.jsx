@@ -1,4 +1,4 @@
-// frontend/src/X402Provider.jsx
+// frontend/src/X402Provider.jsx (FIXED)
 
 import { Buffer } from "buffer";
 import React, {
@@ -24,7 +24,8 @@ import {
 // Pastikan polyfill buffer global ada (seperti di polyfills.js Anda)
 window.Buffer = Buffer;
 
-const X402Context = createContext(null);
+// INILAH PERBAIKANNYA: Menambahkan 'export'
+export const X402Context = createContext(null);
 
 const isWalletError = (error) => {
   return (
@@ -193,6 +194,9 @@ export function X402Provider({ children }) {
     },
     [publicKey, executePayment]
   );
+  
+  // Ambil API_BASE dari env
+  const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
   /**
    * IMPROVISASI #1: Fungsi untuk menyetor anggaran
@@ -210,28 +214,20 @@ export function X402Provider({ children }) {
 
       try {
         // 1. Dapatkan info invoice untuk detail pembayaran
-        const res = await fetch(invoiceUrl, {
-            headers: { "x402-Payer-Pubkey": publicKey.toBase58() }
-        });
-        if (res.status !== 402 && res.status !== 200) {
-            // Jika 200, berarti anggaran sudah ada, kita tetap bisa dapat info dari body
-             if(res.status !== 200) throw new Error("Gagal mengambil info invoice untuk setoran.");
-        }
-        
-        // Kita hanya butuh info, jadi kita 'pura-pura' 402
-        let invoice;
-        if(res.status === 402) {
-            invoice = await res.json();
-        } else {
-            // Jika 200 OK (karena anggaran sudah ada), server harusnya tetap
-            // mengirim info pembayaran. Mari kita asumsikan kita perlu endpoint
-            // /api/agent-tools untuk info ini.
-            // UNTUK HACKATHON: Kita asumsikan SEMUA endpoint berbayar menggunakan
-            // token dan penerima yang SAMA. Jadi kita panggil 402 saja.
-             const res402 = await fetch(invoiceUrl);
-             if(res402.status !== 402) throw new Error("Tidak bisa mendapatkan invoice 402 untuk setoran.");
-             invoice = await res402.json();
-        }
+         const res402 = await fetch(invoiceUrl);
+         if(res402.status !== 402) {
+            // Coba ambil dari /api/agent-tools jika endpoint pertama tidak 402
+            const toolsRes = await fetch(`${API_BASE}/api/agent-tools`);
+            const tools = await toolsRes.json();
+            if(!tools || tools.length === 0) throw new Error("Tidak bisa mendapatkan info invoice 402 untuk setoran.");
+            // Panggil 402 secara manual
+            const fallbackRes = await fetch(`${API_BASE}${tools[0].endpoint}`);
+            if(fallbackRes.status !== 402) throw new Error("Gagal mengambil info invoice 402.");
+            invoice = await fallbackRes.json();
+         } else {
+            invoice = await res402.json();
+         }
+
 
         // 2. Modifikasi invoice untuk setoran
         const depositInvoice = {
@@ -278,11 +274,8 @@ export function X402Provider({ children }) {
         return null;
       }
     },
-    [publicKey, executePayment]
+    [publicKey, executePayment, API_BASE] // Tambahkan API_BASE ke dependensi
   );
-  
-  // Ambil API_BASE dari env
-  const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
   const value = {
     isLoading,
@@ -294,14 +287,3 @@ export function X402Provider({ children }) {
 
   return <X402Context.Provider value={value}>{children}</X402Context.Provider>;
 }
-
-/**
- * Hook kustom untuk mengakses X402 context
- */
-export const useX402 = () => {
-  const context = useContext(X402Context);
-  if (!context) {
-    throw new Error("useX402 harus digunakan di dalam X402Provider");
-  }
-  return context;
-};
