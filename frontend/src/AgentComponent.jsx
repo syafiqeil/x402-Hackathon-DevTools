@@ -49,28 +49,48 @@ const styles = {
   }
 };
 
+function usePaidContext(docId) {
+  const { data, error, isLoading, fetchData } = useX402(
+    `${API_BASE}/api/get-context?docId=${docId}`
+  );
+  
+  // mengembalikan data atau melempar error agar lebih mudah ditangani
+  const fetchContext = async () => {
+    // kita tidak perlu melewatkan URL lagi, karena hook sudah memilikinya
+    const result = await fetchData(); 
+    
+    if (result && result.context) {
+      return result.context;
+    } else {
+      // jika 'result' null (karena error), lempar pesan error dari hook
+      throw new Error(error || "Gagal mengambil konteks.");
+    }
+  };
+
+  return { isLoading, fetchContext };
+}
+
+
 export function AgentComponent() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([
-    { from: 'agent', text: 'Hello! I am a RAG agent. You can ask me about "tokenomics" or "roadmap".' }
+    { from: 'agent', text: 'Halo! Saya adalah agen RAG. Anda bisa bertanya tentang "tokenomics" atau "roadmap".' }
   ]);
-
-  // agen ini memiliki alat (tool) yang dilindungi oleh x402
-  const contextApi = useX402();
+  const [isThinking, setIsThinking] = useState(false);
 
   const addMessage = (from, text, style = {}) => {
     setMessages(prev => [...prev, { from, text, style }]);
   };
 
   const handleSend = async () => {
-    if (!prompt) return;
+    if (!prompt || isThinking) return;
     
     addMessage('user', prompt, styles.userMsg);
     setPrompt('');
+    setIsThinking(true); // agen mulai berpikir
 
     // Logika Inti Agen AI 
     try {
-      // 1. agen berpikir dan memutuskan apakah ia butuh data
       let docId = null;
       if (prompt.toLowerCase().includes('tokenomics')) {
         docId = 'tokenomics';
@@ -78,28 +98,30 @@ export function AgentComponent() {
         docId = 'roadmap';
       }
 
-      let context = "Maaf, saya tidak tahu jawabannya.";
+      let answer = "Maaf, saya tidak tahu jawabannya.";
 
-      // 2. jika butuh data, agen membeli data tersebut
       if (docId) {
         addMessage('agent', `Saya perlu mengambil dokumen "${docId}". Ini memerlukan pembayaran 0.005 Token...`, styles.agentThinking);
         
-        // agen secara otonom menggunakan Dev Tool yang ada
-        const url = `${API_BASE}/api/get-context?docId=${docId}`;
-        const data = await contextApi.fetchData(url); // memicu alur 402
+        // agen mmemanggil alatnya. 
+        // hook-nya dibuat di sini, saat dibutuhkan
+        const { fetchContext } = usePaidContext(docId);
         
-        if (data && data.context) {
-          context = `Berikut adalah informasi tentang ${docId}: ${data.context}`;
-        } else {
-          throw new Error(contextApi.error || "Gagal mengambil konteks.");
-        }
+        // agen secara otonom menggunakan Dev Tool Anda
+        const context = await fetchContext(); // memicu alur 402
+        
+        // di sini bisa mengintegrasikan LLM 
+        // Untuk sekarang, digabungkan secara manual
+        answer = `Berikut adalah informasi tentang ${docId}: ${context}`;
       }
 
       // 3. agen memberikan jawaban
-      addMessage('agent', context, styles.agentMsg);
+      addMessage('agent', answer, styles.agentMsg);
 
     } catch (err) {
       addMessage('agent', `Error: ${err.message}`, { ...styles.agentMsg, color: 'red' });
+    } finally {
+      setIsThinking(false); // agen selesai berpikir
     }
   };
 
