@@ -24,7 +24,7 @@ import {
 // Pastikan polyfill buffer global ada (seperti di polyfills.js Anda)
 window.Buffer = Buffer;
 
-// INILAH PERBAIKANNYA: Menambahkan 'export'
+// INI YANG SEBELUMNYA ERROR: Menambahkan 'export'
 export const X402Context = createContext(null);
 
 const isWalletError = (error) => {
@@ -179,7 +179,8 @@ export function X402Provider({ children }) {
           setIsLoading(false);
           return finalJsonData;
         } else {
-          throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+            const errorText = await res.text();
+            throw new Error(`HTTP Error: ${res.status} ${res.statusText} - ${errorText}`);
         }
       } catch (err) {
         console.error(err);
@@ -213,8 +214,15 @@ export function X402Provider({ children }) {
       }
 
       try {
-        // 1. Dapatkan info invoice untuk detail pembayaran
+        // 1. Dapatkan info invoice
          const res402 = await fetch(invoiceUrl);
+         
+         // ===============================================
+         // ===== INI ADALAH PERBAIKANNYA (BARIS 209) =====
+         // ===============================================
+         let invoice; 
+         // ===============================================
+         
          if(res402.status !== 402) {
             // Coba ambil dari /api/agent-tools jika endpoint pertama tidak 402
             const toolsRes = await fetch(`${API_BASE}/api/agent-tools`);
@@ -264,17 +272,17 @@ export function X402Provider({ children }) {
         setIsLoading(false);
         return confirmData;
       } catch (err) {
-        console.error(err);
+        console.error(err); // <-- Ini yang mencetak ReferenceError
         if (isWalletError(err)) {
           setError("Transaksi dibatalkan oleh pengguna.");
         } else {
-          setError(err.message);
+          setError(err.message); // <-- Ini yang menyebabkan "null"
         }
         setIsLoading(false);
         return null;
       }
     },
-    [publicKey, executePayment, API_BASE] // Tambahkan API_BASE ke dependensi
+    [publicKey, executePayment, API_BASE] 
   );
 
   const value = {
