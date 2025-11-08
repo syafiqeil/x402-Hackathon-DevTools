@@ -47,11 +47,11 @@ function PremiumContent() {
   const isLoading = isPublicLoading || isPremiumLoading;
 
   return (
-    <div className="w-full flex flex-col space-y-6">
-      <div className="grid grid-cols-1 gap-6">
+    <div className="w-full h-full flex flex-col space-y-6">
+      <div className="flex flex-col gap-6 h-full">
         
         {/* Kartu API Publik */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col h-full">
           <h2 className="text-xl font-semibold mb-3">Public API (Free)</h2>
           <p className="text-gray-600 text-sm mb-4 min-h-[40px]">
             This endpoint demonstrates free access without any payment.
@@ -71,7 +71,7 @@ function PremiumContent() {
         </div>
 
         {/* Kartu API Premium */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col">
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col h-full">
           <h2 className="text-xl font-semibold mb-3">Premium API (x402)</h2>
           <p className="text-gray-600 text-sm mb-4 min-h-[40px]">
             This endpoint is protected. It will use the Agent Budget first, or trigger a 402 popup.
@@ -81,7 +81,7 @@ function PremiumContent() {
             disabled={isLoading}
             className="mt-auto w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
           >
-            {isPremiumLoading ? "Paying & Fetching..." : "Fetch Premium Data (0.01)"}
+            {isPremiumLoading ? "Paying & Fetching..." : "Fetch Premium Data"}
           </button>
           {premiumData && (
             <pre className="mt-4 bg-green-50 border border-green-200 text-green-800 p-3 rounded text-xs overflow-x-auto">

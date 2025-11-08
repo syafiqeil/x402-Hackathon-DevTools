@@ -1,6 +1,6 @@
 // frontend/src/AgentComponent.jsx (TAILWIND & ENGLISH)
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useX402 } from "./useX402"; 
 
 export function AgentComponent() {
@@ -15,6 +15,7 @@ export function AgentComponent() {
   const [availableTools, setAvailableTools] = useState([]);
   const [budgetAmount, setBudgetAmount] = useState(0.01);
   const [localError, setLocalError] = useState(null);
+  const chatboxRef = useRef(null);
 
   const { fetchWith402, depositBudget, isWalletError, API_BASE } = useX402();
 
@@ -35,6 +36,12 @@ export function AgentComponent() {
     };
     fetchTools();
   }, [API_BASE]);
+
+  useEffect(() => {
+    if (chatboxRef.current) {
+      chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const addMessage = (from, text) => {
     setMessages((prev) => [...prev, { from, text }]);
@@ -132,7 +139,7 @@ export function AgentComponent() {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg shadow p-6 bg-white">
+    <div className="h-full flex flex-col border border-gray-200 rounded-lg shadow p-6 bg-white">
       <h2 className="text-xl font-semibold mb-3">
         x402 Autonomous Agent (RAG)
       </h2>
@@ -166,7 +173,10 @@ export function AgentComponent() {
       </div>
 
       {/* Kotak Obrolan */}
-      <div className="mt-4 border border-gray-200 rounded-lg p-4 h-64 overflow-y-auto bg-gray-50 space-y-3">
+      <div 
+        ref={chatboxRef} 
+        className="mt-4 border border-gray-200 rounded-lg p-4 h-40 overflow-y-auto bg-gray-50 space-y-3" 
+      >
         {messages.map((msg, i) => (
           <div 
             key={i} 
@@ -177,31 +187,34 @@ export function AgentComponent() {
         ))}
       </div>
 
-      {/* Input Pengguna */}
-      <div className="mt-4 flex gap-3">
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask about 'tokenomics' or 'roadmap'"
-          className="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={handleSend}
-          disabled={isThinking}
-          className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
-        >
-          {isThinking ? "..." : "Send"}
-        </button>
-      </div>
-
-      {/* Kotak Error Lokal */}
-      {localError && (
-        <div className="mt-4 bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-sm">
-          <strong>Error:</strong> {localError}
+      {/* Wrapper untuk Input & Error */}
+      <div className="mt-auto pt-4"> 
+        {/* Input Pengguna */}
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            placeholder="Ask about 'tokenomics' or 'roadmap'"
+            className="flex-grow px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSend}
+            disabled={isThinking}
+            className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          >
+            {isThinking ? "..." : "Send"}
+          </button>
         </div>
-      )}
+
+        {/* Kotak Error Lokal */}
+        {localError && (
+          <div className="mt-4 bg-red-50 border border-red-300 text-red-700 p-3 rounded-lg text-sm">
+            <strong>Error:</strong> {localError}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
