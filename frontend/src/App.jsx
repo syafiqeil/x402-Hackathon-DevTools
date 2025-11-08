@@ -9,7 +9,8 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
-import PremiumContent from "./PremiumContent.jsx"; 
+import PremiumContent from "./PremiumContent.jsx";
+import { X402Provider } from "./X402Provider.jsx"; // <-- IMPOR BARU
 
 function App() {
   const solanaNetwork = "devnet";
@@ -20,7 +21,12 @@ function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          <PremiumContent />
+          <X402Provider>
+            {" "}
+            {/* <-- BUNGKUS DI SINI */}
+            <PremiumContent />
+          </X402Provider>{" "}
+          {/* <-- TUTUP DI SINI */}
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
@@ -28,5 +34,3 @@ function App() {
 }
 
 export default App;
-
-
