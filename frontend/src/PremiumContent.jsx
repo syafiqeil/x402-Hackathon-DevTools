@@ -10,7 +10,7 @@ const API_BASE = rawBase.replace(/\/$/, "");
 const styles = {
   container: {
     fontFamily: 'Arial, sans-serif',
-    maxWidth: '1200px',
+    maxWidth: '600px',
     margin: '0 auto',
     padding: '20px',
     color: '#333',
