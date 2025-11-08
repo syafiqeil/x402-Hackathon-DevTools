@@ -1,4 +1,4 @@
-// backend/x402-paywall.js
+// backend/x402-paywall.js 
 
 const { Connection, clusterApiUrl, PublicKey } = require("@solana/web3.js");
 const { getMint } = require("@solana/spl-token");
@@ -101,13 +101,19 @@ async function verifyTransaction(
     
     const isAmountValid = amountReceived === requiredAmountSmallestUnit;
     if (!isAmountValid) {
-      throw new Error(`Jumlah token salah. Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`);
+      // Izinkan jika jumlah lebih besar (misal, setoran)
+      if (amountReceived > requiredAmountSmallestUnit) {
+         console.log("Jumlah diterima lebih besar, mengizinkan untuk setoran budget.");
+      } else {
+         throw new Error(`Jumlah token salah. Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`);
+      }
     }
     
     // Semua valid!
     return {
       success: true,
       amountReceived: Number(amountReceived) / Math.pow(10, mintInfo.decimals),
+      amountReceivedSmallestUnit: amountReceived, // Kembalikan unit terkecil
     };
   } catch (error) {
     console.warn(`Verifikasi gagal: ${error.message}`);
@@ -117,8 +123,6 @@ async function verifyTransaction(
 
 /**
  * IMPROVISASI #1: Middleware Anggaran (Budget Paywall)
- * Ini berjalan SEBELUM x402Paywall.
- * Ia memeriksa apakah pengguna memiliki anggaran yang disetor.
  */
 const budgetPaywall = ({ amount, splToken }) => async (req, res, next) => {
   const payerPubkey = req.headers["x402-payer-pubkey"];
@@ -128,18 +132,19 @@ const budgetPaywall = ({ amount, splToken }) => async (req, res, next) => {
 
   try {
     const budgetKey = `budget_${payerPubkey}`;
-    const currentBudget = (await kv.get(budgetKey)) || 0;
+    const currentBudget = (await kv.get(budgetKey)) || 0; // Anggaran disimpan dalam unit terkecil
 
     const MINT_STR = splToken;
     const MINT_PUBKEY = new PublicKey(MINT_STR);
     const mintInfo = await getMint(connection, MINT_PUBKEY);
-    const requiredAmount = amount * Math.pow(10, mintInfo.decimals);
+    const requiredAmount = BigInt(Math.floor(amount * Math.pow(10, mintInfo.decimals)));
 
     if (currentBudget >= requiredAmount) {
       // Anggaran CUKUP!
-      console.log(`BudgetPaywall: Menggunakan anggaran untuk ${payerPubkey}. Sisa: ${currentBudget - requiredAmount}`);
+      const newBudget = BigInt(currentBudget) - requiredAmount;
+      console.log(`BudgetPaywall: Menggunakan anggaran untuk ${payerPubkey}. Sisa: ${newBudget}`);
       // Kurangi anggaran dan berikan akses
-      await kv.set(budgetKey, currentBudget - requiredAmount);
+      await kv.set(budgetKey, newBudget.toString()); // Simpan sebagai string
       req.x402_payment_method = "budget"; // Tandai bahwa ini dibayar via anggaran
       return next(); // Lolos!
     } else {
@@ -155,24 +160,17 @@ const budgetPaywall = ({ amount, splToken }) => async (req, res, next) => {
 
 /**
  * Paywall 402 Asli (Sekarang sebagai Fallback)
- * @param {object} options
- * @param {number} options.amount
- * @param {string} options.splToken
- * @param {string} options.recipientWallet
  */
 function x402Paywall({ amount, splToken, recipientWallet }) {
   return async (req, res, next) => {
     try {
-      // Jika request sudah diloloskan oleh budgetPaywall, lewati
       if (req.x402_payment_method === "budget") {
         return next();
       }
 
-      // Konfigurasi Kunci
       const MINT_PUBKEY = new PublicKey(splToken.trim());
       const RECIPIENT_WALLET_PUBKEY = new PublicKey(recipientWallet.trim());
 
-      // 1. Jalur Verifikasi (Verification Path)
       const authHeader = req.headers["authorization"];
       const signature = authHeader?.startsWith("x402 ")
         ? authHeader.split(" ")[1]
@@ -180,7 +178,6 @@ function x402Paywall({ amount, splToken, recipientWallet }) {
       const reference = req.query.reference ? req.query.reference.toString() : null;
 
       if (signature && reference) {
-        // Cek Replay Attack
         const refKey = `ref_${reference}`;
         if (await kv.get(refKey)) {
           return res.status(401).json({ error: "Pembayaran sudah diklaim (replay attack)" });
@@ -196,18 +193,24 @@ function x402Paywall({ amount, splToken, recipientWallet }) {
           RECIPIENT_WALLET_PUBKEY
         );
 
-        if (verification.success) {
-          // PEMBAYARAN BERHASIL! Simpan referensi
-          await kv.set(refKey, true, { ex: 300 }); // simpan selama 5 menit
+        // Validasi jumlah yang diterima HARUS SAMA PERSIS untuk 402 onetime
+        const mintInfo = await getMint(connection, MINT_PUBKEY);
+        const requiredAmountSmallestUnit = BigInt(Math.floor(amount * Math.pow(10, mintInfo.decimals)));
+
+        if (verification.success && verification.amountReceivedSmallestUnit === requiredAmountSmallestUnit) {
+          await kv.set(refKey, true, { ex: 300 }); 
           console.log("Pembayaran valid. Akses diberikan.");
-          req.x402_payment_method = "onetime"; // Tandai sebagai pembayaran sekali pakai
+          req.x402_payment_method = "onetime"; 
           return next();
         } else {
-          return res.status(401).json({ error: `Pembayaran tidak valid: ${verification.error}` });
+          let errorMsg = verification.error;
+          if (verification.amountReceivedSmallestUnit !== requiredAmountSmallestUnit) {
+              errorMsg = `Jumlah token salah. Diterima: ${verification.amountReceivedSmallestUnit}, Dibutuhkan: ${requiredAmountSmallestUnit}`;
+          }
+          return res.status(401).json({ error: `Pembayaran tidak valid: ${errorMsg}` });
         }
       }
 
-      // 2. Jalur Tantangan 402 (Challenge Path)
       console.log("Tidak ada bukti bayar. Mengirim tantangan 402.");
       const newReference = randomUUID();
       const invoice = {
@@ -226,4 +229,5 @@ function x402Paywall({ amount, splToken, recipientWallet }) {
   };
 }
 
-module.exports = { x402Paywall, budgetPaywall, verifyTransaction, kv };
+// Ekspor 'connection' agar server.js bisa menggunakannya
+module.exports = { x402Paywall, budgetPaywall, verifyTransaction, kv, connection };
