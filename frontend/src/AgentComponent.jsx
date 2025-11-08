@@ -70,11 +70,10 @@ function usePaidContext(docId) {
   return { isLoading, fetchContext };
 }
 
-
 export function AgentComponent() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([
-    { from: 'agent', text: 'Halo! Saya adalah agen RAG. Anda bisa bertanya tentang "tokenomics" atau "roadmap".' }
+    { from: 'agent', text: 'Hello! I am a RAG agent. You can ask me about "tokenomics" or "roadmap".' }
   ]);
   const [isThinking, setIsThinking] = useState(false);
 

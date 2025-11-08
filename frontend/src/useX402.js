@@ -247,7 +247,7 @@ export function useX402(url) {
             console.log("Instruksi memo berhasil ditambahkan");
             
           } catch (pubKeyErr) {
-            console.error("Error saat membuat instruksi memo:", pubKeyErr); // DIUBAH DARI log sebelumnya
+            console.error("Error saat membuat instruksi memo:", pubKeyErr); 
             setError(`Gagal membuat instruksi memo: ${pubKeyErr.message}`);
             throw pubKeyErr; 
           }
