@@ -41,7 +41,9 @@ export function useX402(url) {
       const res = await fetch(url);
 
       if (res.ok) {
-        setData(await res.json());
+        const jsonData = await res.json();
+        setData(jsonData);
+        return jsonData; 
       } else if (res.status === 402) {
         // 2. pembayaran diperlukan!
         const invoice = await res.json();
@@ -414,7 +416,9 @@ export function useX402(url) {
           throw new Error(`Pembayaran terkirim, tapi verifikasi gagal: ${finalError.error || 'Server error'}`);
         }
 
-        setData(await finalRes.json());
+        const finalJsonData = await finalRes.json();
+        setData(finalJsonData);
+        return finalJsonData; 
       } else {
         throw new Error(`HTTP Error: ${res.status}`);
       }
