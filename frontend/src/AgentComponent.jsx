@@ -49,27 +49,6 @@ const styles = {
   }
 };
 
-function usePaidContext(docId) {
-  const { data, error, isLoading, fetchData } = useX402(
-    `${API_BASE}/api/get-context?docId=${docId}`
-  );
-  
-  // mengembalikan data atau melempar error agar lebih mudah ditangani
-  const fetchContext = async () => {
-    // kita tidak perlu melewatkan URL lagi, karena hook sudah memilikinya
-    const result = await fetchData(); 
-    
-    if (result && result.context) {
-      return result.context;
-    } else {
-      // jika 'result' null (karena error), lempar pesan error dari hook
-      throw new Error(error || "Gagal mengambil konteks.");
-    }
-  };
-
-  return { isLoading, fetchContext };
-}
-
 export function AgentComponent() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState([
@@ -77,6 +56,14 @@ export function AgentComponent() {
   ]);
   const [isThinking, setIsThinking] = useState(false);
 
+  // panggil hook di top level untuk setiap endpoint yang mungkin
+  const tokenomicsApi = useX402(
+    `${API_BASE}/api/get-context?docId=tokenomics`
+  );
+  const roadmapApi = useX402(
+    `${API_BASE}/api/get-context?docId=roadmap`
+  );
+  
   const addMessage = (from, text, style = {}) => {
     setMessages(prev => [...prev, { from, text, style }]);
   };
@@ -86,9 +73,8 @@ export function AgentComponent() {
     
     addMessage('user', prompt, styles.userMsg);
     setPrompt('');
-    setIsThinking(true); // agen mulai berpikir
+    setIsThinking(true);
 
-    // Logika Inti Agen AI 
     try {
       let docId = null;
       if (prompt.toLowerCase().includes('tokenomics')) {
@@ -102,25 +88,57 @@ export function AgentComponent() {
       if (docId) {
         addMessage('agent', `Saya perlu mengambil dokumen "${docId}". Ini memerlukan pembayaran 0.005 Token...`, styles.agentThinking);
         
-        // agen mmemanggil alatnya. 
-        // hook-nya dibuat di sini, saat dibutuhkan
-        const { fetchContext } = usePaidContext(docId);
-        
-        // agen secara otonom menggunakan Dev Tool Anda
-        const context = await fetchContext(); // memicu alur 402
-        
-        // di sini bisa mengintegrasikan LLM 
-        // Untuk sekarang, digabungkan secara manual
-        answer = `Berikut adalah informasi tentang ${docId}: ${context}`;
+        let context = null;
+        let apiError = null;
+
+        // panggil fungsi fetchData dari hook yang sudah diinisialisasi
+        if (docId === 'tokenomics') {
+          // jika isLoading atau ada error sebelumnya, tampilkan
+          if (tokenomicsApi.isLoading) {
+             addMessage('agent', 'Pembayaran tokenomics sedang diproses...', styles.agentThinking);
+             return; // jangan kirim lagi jika sudah loading
+          }
+          if (tokenomicsApi.error) {
+            apiError = tokenomicsApi.error;
+          }
+          const result = await tokenomicsApi.fetchData();
+          if (result && result.context) {
+            context = result.context;
+          } else {
+            apiError = tokenomicsApi.error; // ambil error terbaru dari hook
+          }
+
+        } else if (docId === 'roadmap') {
+          // jika isLoading atau ada error sebelumnya, tampilkan
+          if (roadmapApi.isLoading) {
+             addMessage('agent', 'Pembayaran roadmap sedang diproses...', styles.agentThinking);
+             return; // jangan kirim lagi jika sudah loading
+          }
+           if (roadmapApi.error) {
+            apiError = roadmapApi.error;
+          }
+          const result = await roadmapApi.fetchData();
+          if (result && result.context) {
+            context = result.context;
+          } else {
+            apiError = roadmapApi.error; // ambil error terbaru dari hook
+          }
+        }
+       
+        if (context) {
+          answer = `Berikut adalah informasi tentang ${docId}: ${context}`;
+        } else {
+          // lempar error jika ada, agar ditangkap oleh 'catch'
+          throw new Error(apiError || "Gagal mengambil konteks.");
+        }
       }
 
-      // 3. agen memberikan jawaban
       addMessage('agent', answer, styles.agentMsg);
 
     } catch (err) {
       addMessage('agent', `Error: ${err.message}`, { ...styles.agentMsg, color: 'red' });
     } finally {
-      setIsThinking(false); // agen selesai berpikir
+      setIsThinking(false);
     }
   };
 
