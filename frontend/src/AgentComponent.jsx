@@ -137,7 +137,7 @@ export function AgentComponent() {
         x402 Autonomous Agent (RAG)
       </h2>
       <p className="text-sm text-gray-600 mb-4">
-        This agent dynamically **finds its tools** and **manages its budget**.
+        This agent dynamically finds its tools and manages its budget.
         Deposit a budget to allow the agent to operate without prompting you
         for every micro-payment.
       </p>

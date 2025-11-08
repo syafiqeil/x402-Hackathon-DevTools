@@ -8,8 +8,9 @@ import {
 import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
-import PremiumContent from "./PremiumContent.jsx";
-import { X402Provider } from "./X402Provider.jsx";
+import PremiumContent from "./PremiumContent.jsx"; 
+import { AgentComponent } from "./AgentComponent.jsx"; 
+import { X402Provider } from "./X402Provider.jsx"; 
 
 function App() {
   const solanaNetwork = "devnet";
@@ -24,26 +25,22 @@ function App() {
             <div className="min-h-screen bg-white text-gray-900">
               <div className="container mx-auto max-w-7xl p-4 lg:p-8">
                 
-                <header className="flex lg:hidden justify-between items-center pb-4 mb-4 border-b border-gray-200">
-                  <h1 className="text-2xl font-bold">x402 DevTools</h1>
+                <header className="flex justify-between items-center pb-4 mb-6 border-b border-gray-200">
+                  <h1 className="text-2xl lg:text-3xl font-bold">x402 DevTools</h1>
                   <WalletMultiButton />
                 </header>
 
-                <div className="flex flex-col lg:flex-row lg:space-x-8">
+                <div className="flex flex-col lg:flex-row lg:space-x-6">
                   
-                  <div className="w-full lg:w-1/2 flex-shrink-0">
-                    
-                    <header className="hidden lg:flex justify-between items-center pb-4 mb-6">
-                      <h1 className="text-3xl font-bold">x402 DevTools</h1>
-                      <WalletMultiButton />
-                    </header>
-                    
+                  <div className="w-full lg:w-1/3">
+                    <AgentComponent /> 
+                  </div>
+
+                  <div className="w-full lg:w-1/3 mt-6 lg:mt-0">
                     <PremiumContent />
                   </div>
 
-                  <div className="hidden lg:block w-px bg-gray-200"></div>
-
-                  <div className="w-full lg:w-1/2 mt-8 lg:mt-0 lg:pt-20 lg:pl-8">
+                  <div className="w-full lg:w-1/3 mt-6 lg:mt-0">
                     <div className="sticky top-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
                       <h2 className="text-2xl font-semibold mb-4">Developer Tool</h2>
                       <p className="text-gray-600 leading-relaxed mb-4">
@@ -64,7 +61,7 @@ function App() {
                         </li>
                       </ul>
                       <p className="text-gray-600 leading-relaxed">
-                        The **Autonomous Agent** on the left uses these tools. Try depositing a budget, then ask it a question to see it pay for its own data instantly, without a wallet pop-up.
+                        The Autonomous Agent on the left uses these tools. Try depositing a budget, then ask it a question to see it pay for its own data instantly, without a wallet pop-up.
                       </p>
                     </div>
                   </div>

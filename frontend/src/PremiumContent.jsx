@@ -1,9 +1,8 @@
 // frontend/src/PremiumContent.jsx 
 
 import React, { useState } from "react";
-import "@solana/wallet-adapter-react-ui/styles.css";
+import "@solana/wallet-adapter-react-ui/styles.css"; 
 import { useX402 } from "./useX402";
-import { AgentComponent } from "./AgentComponent";
 
 function PremiumContent() {
   const { fetchWith402, API_BASE } = useX402();
@@ -48,15 +47,8 @@ function PremiumContent() {
   const isLoading = isPublicLoading || isPremiumLoading;
 
   return (
-    <div className="w-full">
-      {/* 1. Komponen Agen */}
-      <AgentComponent />
-
-      {/* Pemisah */}
-      <hr className="my-8 border-gray-200" />
-
-      {/* 2. Grid API Publik/Premium */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="w-full flex flex-col space-y-6">
+      <div className="grid grid-cols-1 gap-6">
         
         {/* Kartu API Publik */}
         <div className="bg-white border border-gray-200 rounded-lg shadow p-6 flex flex-col">
@@ -99,7 +91,7 @@ function PremiumContent() {
         </div>
       </div>
       
-      {/* Global Error Box */}
+      {/* Kotak Error Global */}
       {localError && (
         <div className="mt-6 bg-red-50 border border-red-300 text-red-700 p-4 rounded-lg text-sm">
           <strong>Error:</strong> {localError}
