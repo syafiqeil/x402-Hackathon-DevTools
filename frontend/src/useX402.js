@@ -15,7 +15,7 @@ import {
   getAccount,
 } from "@solana/spl-token";
 
-// Untuk mendeteksi error spesifik dari dompet
+// untuk mendeteksi error spesifik dari dompet
 const isWalletError = (error) => {
   return error.name === 'WalletSignTransactionError' || 
          error.name === 'WalletSendTransactionError' ||
@@ -36,13 +36,13 @@ export function useX402(url) {
     setData(null);
 
     try {
-      // 1. COBA AKSES RESOURCE
+      // 1. coba akses resource
       const res = await fetch(url);
 
       if (res.ok) {
         setData(await res.json());
       } else if (res.status === 402) {
-        // 2. PEMBAYARAN DIPERLUKAN!
+        // 2. pembayaran diperlukan!
         const invoice = await res.json();
         console.log("Menerima faktur 402:", invoice);
 
@@ -51,15 +51,15 @@ export function useX402(url) {
           throw new Error("Dompet tidak terhubung.");
         }
 
-        // 3. BANGUN TRANSAKSI
+        // 3. bangun transaksi
         const tx = new Transaction();
 
-        // Validasi invoice 
+        // validasi invoice 
         if (!invoice.token || !invoice.recipientWallet || !invoice.reference) {
           throw new Error("Invoice tidak lengkap. Pastikan backend mengirim token, recipientWallet, dan reference.");
         }
 
-        // Validasi publicKey dari wallet
+        // validasi publicKey dari wallet
         if (!publicKey) {
           throw new Error("Wallet publicKey tidak tersedia. Pastikan wallet terhubung.");
         }
@@ -97,7 +97,7 @@ export function useX402(url) {
         const amountInSmallestUnit = BigInt(Math.floor(invoice.amount * Math.pow(10, mintInfo.decimals)));
         console.log("Amount in smallest unit:", amountInSmallestUnit.toString(), "type:", typeof amountInSmallestUnit);
 
-        // Cari alamat token account (ATA) pembayar
+        // cari alamat token account ATA pembayar
         console.log("Menghitung ATA pembayar...");
         const payerTokenAccountAddress = await getAssociatedTokenAddress(
           mintPubKey,
@@ -114,12 +114,12 @@ export function useX402(url) {
      
         console.log("ATA recipient (dari invoice):", recipientTokenAccountAddress.toBase58()); 
 
-        // Validasi: ATA pembayar tidak boleh sama dengan ATA recipient
+        // validasi: ATA pembayar tidak boleh sama dengan ATA recipient
         if (payerTokenAccountAddress.equals(recipientTokenAccountAddress)) { 
           throw new Error("Error: Wallet pembayar dan wallet penerima sama!");
         }
 
-        // Cek apakah ATA pembayar sudah ada dan punya saldo
+        // cek apakah ATA pembayar sudah ada dan punya saldo
         let payerTokenAccountInfo = null;
         let payerTokenAccountExists = false;
         try {
@@ -128,7 +128,7 @@ export function useX402(url) {
           console.log("ATA pembayar sudah ada, saldo:", payerTokenAccountInfo.amount.toString());
           payerTokenAccountExists = true;
           
-          // Cek apakah saldo cukup
+          // cek apakah saldo cukup
           if (payerTokenAccountInfo.amount < BigInt(amountInSmallestUnit)) {
             throw new Error(`Saldo token tidak cukup. Diperlukan: ${invoice.amount}, Tersedia: ${Number(payerTokenAccountInfo.amount) / Math.pow(10, mintInfo.decimals)}`);
           }
@@ -142,12 +142,12 @@ export function useX402(url) {
             console.error("Invalid public key error di getAccount:", err);
             throw new Error(`Error saat mengakses token account: ${err.message}`);
           }
-          // Account tidak ada, perlu dibuat
+          // account tidak ada, perlu dibuat
           console.log("ATA pembayar belum ada, akan dibuat");
           payerTokenAccountExists = false;
         }
 
-        // Tambahkan instruksi untuk MEMBUAT ATA hanya jika belum ada
+        // tambahkan instruksi untuk membuat ATA hanya jika belum ada
         if (!payerTokenAccountExists) {
           console.log("Menambahkan instruksi create ATA...");
           try {
@@ -183,13 +183,13 @@ export function useX402(url) {
             );
             console.log("Instruksi create ATA penerima berhasil ditambahkan");
           } else {
-            // Error lain yang tidak terduga
+            // error lain yang tidak terduga
             console.error("Error saat cek ATA penerima:", err);
             throw new Error(`Error saat cek ATA penerima: ${err.message}`);
           }
         }
 
-        // Buat instruksi transfer token
+        // buat instruksi transfer token
         console.log("Menambahkan instruksi transfer token...");
         try {
           tx.add(
@@ -206,7 +206,7 @@ export function useX402(url) {
           throw new Error(`Error saat membuat instruksi transfer: ${err.message}`);
         }
 
-        // Buat instruksi memo
+        // buat instruksi memo
         console.log("Menambahkan instruksi memo...");
         
         console.log(`DEBUG: Mengecek 'window.Buffer'`);
@@ -257,7 +257,7 @@ export function useX402(url) {
           throw err; 
         }
         
-        // 4. KIRIM TRANSAKSI 
+        // 4. kirim transaksi
         let signature;
         try {
           console.log("Meminta persetujuan transaksi...");
@@ -269,7 +269,7 @@ export function useX402(url) {
             dataLength: ix.data?.length
           })));
           
-          // Dapatkan konteks blockhash terbaru dan set ke transaksi
+          // dapatkan konteks blockhash terbaru dan set ke transaksi
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
           tx.recentBlockhash = blockhash;
           tx.feePayer = payerPubKey;
@@ -282,7 +282,7 @@ export function useX402(url) {
             numSigners: tx.signers?.length || 0
           });
           
-          // Pastikan transaksi memiliki signer yang benar
+          // pastikan transaksi memiliki signer yang benar
           console.log("Memverifikasi instruksi memiliki signer...");
           tx.instructions.forEach((ix, idx) => {
             const hasSigner = ix.keys.some(key => key.isSigner);
@@ -292,10 +292,10 @@ export function useX402(url) {
             }
           });
           
-          // Pastikan feePayer ada sebagai signer di transaksi
+          // pastikan feePayer ada sebagai signer di transaksi
           console.log("Menyiapkan transaksi untuk wallet adapter...");
           
-          // Validasi transaksi sebelum dikirim
+          // validasi transaksi sebelum dikirim
           if (!tx.recentBlockhash) {
             throw new Error("Transaksi tidak memiliki recentBlockhash");
           }
@@ -306,7 +306,7 @@ export function useX402(url) {
             throw new Error("Transaksi tidak memiliki instruksi");
           }
           
-          // Cek apakah semua instruksi memiliki signer
+          // cek apakah semua instruksi memiliki signer
           const allHaveSigner = tx.instructions.every(ix => ix.keys.some(key => key.isSigner));
           if (!allHaveSigner) {
             console.warn("Beberapa instruksi tidak memiliki signer, tapi melanjutkan...");
@@ -325,7 +325,7 @@ export function useX402(url) {
             throw new Error(`Transaksi tidak valid: ${serializeError.message}`);
           }
           
-          // Pastikan wallet terhubung dan ready
+          // pastikan wallet terhubung dan ready
           if (!publicKey) {
             throw new Error("Wallet tidak terhubung");
           }
@@ -336,8 +336,8 @@ export function useX402(url) {
           console.log("Wallet ready, publicKey:", publicKey.toBase58());
           console.log("Mengirim transaksi ke wallet adapter (tanpa serialize)...");
           
-          // Kirim transaksi UNSERIALIZED ke wallet adapter
-          // Wallet adapter akan serialize dan sign transaksi
+          // kirim transaksi UNSERIALIZED ke wallet adapter
+          // wallet adapter akan serialize dan sign transaksi
           signature = await sendTransaction(tx, connection);
           console.log("Transaksi berhasil dikirim, signature:", signature);
           console.log("Menunggu konfirmasi...");
@@ -350,7 +350,7 @@ export function useX402(url) {
             console.log("Transaksi dikonfirmasi:", signature);
           } catch (confirmError) {
             console.error("Error saat konfirmasi transaksi:", confirmError);
-            // Cek apakah transaksi benar-benar gagal atau hanya timeout
+            // cek apakah transaksi benar-benar gagal atau hanya timeout
             const txStatus = await connection.getSignatureStatus(signature);
             console.log("Status transaksi:", txStatus);
             
@@ -370,7 +370,7 @@ export function useX402(url) {
             error: walletError
           });
           
-          // Jika sudah ada signature, berarti transaksi sudah dikirim
+          // jika sudah ada signature, berarti transaksi sudah dikirim
           if (signature) {
             console.log("Transaksi sudah dikirim dengan signature:", signature);
             console.log("Tapi terjadi error saat konfirmasi. Cek status transaksi...");
@@ -386,7 +386,7 @@ export function useX402(url) {
               setError(`Transaksi dikirim (signature: ${signature}) tapi terjadi error: ${walletError.message}`);
             }
           } else {
-            // Tangkap error jika pengguna menolak
+            // tangkap error jika pengguna menolak
             if (isWalletError(walletError)) {
               console.log("Pengguna menolak transaksi atau wallet error.");
               setError("Transaksi dibatalkan oleh pengguna atau wallet error. Pastikan popup Phantom muncul dan Anda approve transaksi.");
@@ -395,10 +395,10 @@ export function useX402(url) {
               setError(`Gagal mengirim transaksi: ${walletError.message || 'Unknown error'}. Coba lagi.`);
             }
           }
-          throw walletError; // Hentikan eksekusi
+          throw walletError; // hentikan eksekusi
         }
 
-        // 5. COBA LAGI (Retry) DENGAN BUKTI BAYAR
+        // 5. coba lagi (retry) dengan bukti bayar
         const retryUrl = `${url}?reference=${invoice.reference}`;
         const finalRes = await fetch(retryUrl, {
           headers: {
@@ -417,7 +417,7 @@ export function useX402(url) {
       }
     } catch (err) {
       console.error(err);
-      // Tampilkan error yang sudah kita set sebelumnya, atau pesan default
+      // tampilkan error yang sudah di set sebelumnya, atau pesan default
       if (!error) {
         setError(err.message);
       }

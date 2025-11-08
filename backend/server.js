@@ -1,4 +1,4 @@
-// server.js
+// backend/server.js
 
 const express = require("express");
 const cors = require("cors"); 
@@ -23,7 +23,11 @@ app.get("/api/public", (req, res) => {
 // Ini adalah API premium
 app.get(
   "/api/premium-data",
-  x402Paywall(0.01), 
+  x402Paywall({
+    amount: 0.01,
+    splToken: process.env.SPL_TOKEN_MINT, 
+    recipientWallet: process.env.MY_WALLET_ADDRESS 
+  }), 
   (req, res) => {
     // Kode ini hanya akan berjalan jika pembayaran sudah valid
     res.json({
@@ -33,7 +37,21 @@ app.get(
   }
 );
 
-// Global error handler to ensure CORS headers on errors
+app.get(
+  "/api/super-premium-data",
+  x402Paywall({
+    amount: 0.01,
+    splToken: process.env.SPL_TOKEN_MINT,
+    recipientWallet: process.env.MY_WALLET_ADDRESS
+  }), 
+  (req, res) => {
+    res.json({
+      message: "Ini adalah data SUPER premium!",
+    });
+  }
+);
+
+// Global error handler untuk memastikan header CORS tetap diberikan saat terjadi error
 app.use((err, req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');

@@ -7,47 +7,52 @@ const {
 } = require("@solana/web3.js");
 const { getAssociatedTokenAddress, getAccount } = require("@solana/spl-token");
 const { randomUUID } = require("crypto");
-const bs58 = require("bs58");
 let kvClient = null; 
 
-// --- KONFIGURASI ---
 const SOLANA_NETWORK = "devnet";
 const connection = new Connection(clusterApiUrl(SOLANA_NETWORK), "confirmed");
 
 /**
- * Factory function untuk membuat middleware x402
- * @param {number} amount - Jumlah token yang dibutuhkan
+ * factory function untuk membuat middleware x402
+ * @param {object} options
+ * @param {number} options.amount - jumlah token yang dibutuhkan
+ * @param {string} options.splToken - alamat string dari SPL Token Mint
+ * @param {string} options.recipientWallet - alamat string dari dompet penerima
  */
-function x402Paywall(amount) {
+function x402Paywall({ amount, splToken, recipientWallet }) {
   return async (req, res, next) => {
     try {
-      // Validasi konfigurasi penting
-      const { SPL_TOKEN_MINT: MINT_STR, MY_WALLET_ADDRESS: RECIPIENT_OWNER_STR } = process.env;
-      if (!MINT_STR || !RECIPIENT_OWNER_STR) {
-        return res.status(500).json({ error: "Server not configured (missing SPL_TOKEN_MINT/MY_WALLET_ADDRESS)" });
+      // validasi konfigurasi penting
+      const MINT_STR = splToken;
+      const RECIPIENT_OWNER_STR = recipientWallet;
+      
+      if (!amount || !MINT_STR || !RECIPIENT_OWNER_STR) {
+        return res.status(500).json({ error: "x402Paywall middleware not configured (missing amount, splToken, or recipientWallet)" });
       }
       
       let SPL_TOKEN_MINT, MY_WALLET_ADDRESS;
       try {
         SPL_TOKEN_MINT = new PublicKey(MINT_STR.trim());
       } catch (err) {
-        console.error("Invalid SPL_TOKEN_MINT:", MINT_STR, err);
-        return res.status(500).json({ error: `Invalid SPL_TOKEN_MINT: ${MINT_STR}` });
+        console.error("Invalid splToken:", MINT_STR, err);
+        return res.status(500).json({ error: `Invalid splToken: ${MINT_STR}` });
       }
       
       try {
         MY_WALLET_ADDRESS = new PublicKey(RECIPIENT_OWNER_STR.trim());
       } catch (err) {
-        console.error("Invalid MY_WALLET_ADDRESS:", RECIPIENT_OWNER_STR, err);
-        return res.status(500).json({ error: `Invalid MY_WALLET_ADDRESS: ${RECIPIENT_OWNER_STR}` });
+        console.error("Invalid recipientWallet:", RECIPIENT_OWNER_STR, err);
+        return res.status(500).json({ error: `Invalid recipientWallet: ${RECIPIENT_OWNER_STR}` });
       }
+      
       const kvConfigured = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
       if (kvConfigured && !kvClient) {
         ({ kv: kvClient } = require("@vercel/kv"));
       }
-      // fallback in-memory store saat KV belum dikonfigurasi (dev/demo)
+      // fallback in-memory store saat kv belum dikonfigurasi (dev/demo)
       global.__usedRefs = global.__usedRefs || new Set();
-      // 1. LIHAT JIKA ADA BUKTI PEMBAYARAN (VERIFICATION PATH)
+      
+      // 1. lihat jika ada bukti pembayaran (verification path)
       const authHeader = req.headers["authorization"];
       const signature = authHeader && authHeader.startsWith("x402 ")
         ? authHeader.split(" ")[1]
@@ -55,7 +60,7 @@ function x402Paywall(amount) {
       const reference = req.query.reference ? req.query.reference.toString() : null;
 
       if (signature && reference) {
-        // 1. Cek apakah referensi sudah pernah digunakan (MENGGUNAKAN VERCEL KV)
+        // 1. cek apakah referensi sudah pernah digunakan (menggunakan vercel kv)
         let isUsed = false;
         if (kvConfigured && kvClient) {
           isUsed = await kvClient.get(reference);
@@ -79,13 +84,13 @@ function x402Paywall(amount) {
           return res.status(401).json({ error: "Transaksi pembayaran gagal di blockchain" });
         }
 
-        // Ambil memo
+        // ambil memo
         const memoInstruction = tx.transaction.message.instructions?.find(
           (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         );
         const memo = memoInstruction ? memoInstruction.parsed : null;
         
-        // 1. Dapatkan info mint untuk desimal
+        // 1. dapatkan info mint untuk desimal
         let decimals;
         try {
           const mintInfo = await connection.getParsedAccountInfo(SPL_TOKEN_MINT);
@@ -96,7 +101,7 @@ function x402Paywall(amount) {
         }
         const requiredAmountSmallestUnit = BigInt(Math.floor(amount * Math.pow(10, decimals)));
 
-        // 2. Temukan saldo sebelum dan sesudah untuk wallet penerima
+        // 2. temukan saldo sebelum dan sesudah untuk wallet penerima
         const preBalance = tx.meta.preTokenBalances?.find(
           b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
         );
@@ -104,21 +109,21 @@ function x402Paywall(amount) {
           b => b.owner === RECIPIENT_OWNER_STR && b.mint === MINT_STR
         );
 
-        // 3. Hitung jumlah yang diterima
+        // 3. hitung jumlah yang diterima
         const preAmount = BigInt(preBalance?.uiTokenAmount?.amount || '0');
         const postAmount = BigInt(postBalance?.uiTokenAmount?.amount || '0');
         const amountReceived = postAmount - preAmount;
 
         console.log(`Verifikasi Saldo: Owner ${RECIPIENT_OWNER_STR}, Saldo Awal: ${preAmount}, Saldo Akhir: ${postAmount}, Diterima: ${amountReceived}, Dibutuhkan: ${requiredAmountSmallestUnit}`);
         
-        // --- VALIDASI PEMBAYARAN ---
+        // VALIDASI PEMBAYARAN
         const isAmountValid = amountReceived === requiredAmountSmallestUnit;
-        const isReferenceValid = memo === reference; // Tetap wajibkan memo
+        const isReferenceValid = memo === reference; 
 
         console.log(`Validasi: Amount (${isAmountValid}), Reference (${isReferenceValid}), Memo: ${memo || 'TIDAK ADA'}`);
 
         if (isAmountValid && isReferenceValid) {
-          // PEMBAYARAN BERHASIL! Simpan referensi...
+          // PEMBAYARAN BERHASIL! Simpan referensi
           if (kvConfigured && kvClient) {
             await kvClient.set(reference, true, { ex: 300 });
           } else {
