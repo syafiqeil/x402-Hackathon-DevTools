@@ -17,7 +17,7 @@ app.use(cors());
 
 // Ini adalah API publik
 app.get("/api/public", (req, res) => {
-  res.json({ message: "Ini data gratis untuk semua!" });
+  res.json({ message: "Free data for you all!" });
 });
 
 // Ini adalah API premium
@@ -31,7 +31,7 @@ app.get(
   (req, res) => {
     // Kode ini hanya akan berjalan jika pembayaran sudah valid
     res.json({
-      message: "Ini adalah data premium!",
+      message: "This is your premium data sir!",
       timestamp: new Date().toISOString(),
     });
   }
