@@ -3,6 +3,7 @@
 import React from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useX402 } from "./useX402";
+import { AgentComponent } from "./AgentComponent";
 
 const rawBase = import.meta.env.VITE_API_URL || "";
 const API_BASE = rawBase.replace(/\/$/, "");
@@ -106,6 +107,15 @@ function PremiumContent() {
         <h1 style={styles.headerTitle}>x402 DevTool Demo</h1>
         <WalletMultiButton />
       </header>
+
+      {/* komponen agen */}
+      <AgentComponent /> 
+
+      <hr style={{
+        margin: '30px 0', 
+        border: 'none', 
+        borderBottom: '1px solid #eee'
+      }} />
 
       {/* grid api */}
       <div style={styles.gridContainer}>

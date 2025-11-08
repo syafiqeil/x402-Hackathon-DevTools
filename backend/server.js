@@ -31,7 +31,7 @@ app.get(
   (req, res) => {
     // Kode ini hanya akan berjalan jika pembayaran sudah valid
     res.json({
-      message: "This is your premium data sir!",
+      message: "This is your premium data sir.",
       timestamp: new Date().toISOString(),
     });
   }
@@ -46,8 +46,32 @@ app.get(
   }), 
   (req, res) => {
     res.json({
-      message: "Ini adalah data SUPER premium!",
+      message: "This is your SUPER premium data, Your Majesty",
     });
+  }
+);
+
+const documentDatabase = {
+  "tokenomics": "Details about the project's tokenomics...",
+  "roadmap": "Q1: Mainnet launch, Q2: Integrations..."
+};
+
+app.get(
+  "/api/get-context", 
+  x402Paywall({
+    amount: 0.005, 
+    splToken: process.env.SPL_TOKEN_MINT,
+    recipientWallet: process.env.MY_WALLET_ADDRESS
+  }), 
+  (req, res) => {
+    const docId = req.query.docId; 
+    const content = documentDatabase[docId];
+    
+    if (content) {
+      res.json({ context: content });
+    } else {
+      res.status(404).json({ error: "Dokumen tidak ditemukan" });
+    }
   }
 );
 
