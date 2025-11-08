@@ -81,7 +81,7 @@ function x402Paywall(amount) {
 
         // Ambil memo
         const memoInstruction = tx.transaction.message.instructions.find(
-          (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcVtrnbMpsBwiHggz"
+          (ix) => ix.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         );
         const memo = memoInstruction ? bs58.decode(memoInstruction.data).toString('utf-8') : null;
         
