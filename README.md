@@ -6,14 +6,10 @@ This project is a strong fit for two x402 hackathon tracks:
 1. **x402 Developer Tool - SDKs, infra, libraries**: We built a reusable `x402Paywall` middleware, `budgetPaywall` middleware, and a `useX402` React hook.
 2. **x402 Agent Application - real AI agent use cases**: We created a RAG (Retrieval-Augmented Generation) AI agent that autonomously uses the `useX402` hook to pay for the context it needs.
 
----
-
 ## Live Demo
 
 * **Frontend (RAG Agent Demo):** `https://x402-hackathon-devtools-fe.vercel.app/`
 * **Backend (API Server):** `https://x402-hackathon-devtools.vercel.app/`
-
----
 
 ## Key Features
 
@@ -24,8 +20,6 @@ This project is a strong fit for two x402 hackathon tracks:
 * **Innovative Budget System:** A solution to overcome the UX friction of micropayments. Users/agents can make a **one-time deposit** to fund their "budget", allowing future API calls to execute instantly **without repeated wallet pop-up confirmations**. Ideal for autonomous agents.
 * **Replay Attack Protection:** On-chain memo verification and reference tracking prevent transaction signatures from being reused (using Vercel KV with seamless in-memory fallback).
 * **Dynamic Tool Discovery:** Backend endpoint `/api/agent-tools` allows autonomous agents to dynamically discover available paid tools, cost requirements, and endpoints.
-
----
 
 ## Workflow Concept
 
@@ -66,8 +60,6 @@ This flow happens automatically if the user/agent has a pre-funded budget.
 4. **Backend**: Budget is sufficient! The backend deducts the cost in smallest token units and grants access immediately. **No 402 response, no wallet pop-up.**
 5. **Fallback**: If the budget is insufficient, `budgetPaywall` passes control to `x402Paywall` (Flow 1).
 
----
-
 ## API Endpoints Specification
 
 | Method | Endpoint | Auth / Protected | Description |
@@ -78,8 +70,6 @@ This flow happens automatically if the user/agent has a pre-funded budget.
 | `GET` | `/api/premium-data` | `budgetPaywall` / `x402Paywall` | Cost: **0.01 Tokens**. Returns sample premium data. |
 | `GET` | `/api/get-current-budget?payerPubkey={pubkey}` | Free | Fetches current available budget balance for a wallet public key. |
 | `POST` | `/api/confirm-budget-deposit` | On-chain Verification | Verifies a budget deposit transaction on-chain and credits the user's KV ledger. |
-
----
 
 ## Quick Start (How to Use)
 
@@ -184,8 +174,6 @@ app.post("/api/confirm-budget-deposit", async (req, res) => {
 module.exports = app;
 ```
 
----
-
 ### 2. Frontend (React / Vite)
 
 Access your paid APIs in 3 steps.
@@ -289,8 +277,6 @@ function YourMainComponent() {
 }
 ```
 
----
-
 ## Running Locally
 
 Follow these steps to run both backend and frontend on your local development machine:
@@ -339,8 +325,6 @@ Follow these steps to run both backend and frontend on your local development ma
    ```
    Open `http://localhost:5173` in your browser.
 
----
-
 ## Demo Spotlight: Autonomous RAG Agent
 
 The main demo (`AgentComponent.jsx`) showcases a RAG (Retrieval-Augmented Generation) agent. When you ask it a question:
@@ -350,8 +334,6 @@ The main demo (`AgentComponent.jsx`) showcases a RAG (Retrieval-Augmented Genera
 3. **Fast Budget Execution**: If a budget is pre-funded, the agent retrieves context **instantly without interrupting the user**.
 4. **Fallback 402 Challenge**: If no budget exists, `useX402` triggers a wallet prompt for a one-time payment.
 5. **Context Ingestion**: Once data is retrieved, the agent uses the context to answer the user's query.
-
----
 
 ## Environment Configuration
 
@@ -364,8 +346,6 @@ The main demo (`AgentComponent.jsx`) showcases a RAG (Retrieval-Augmented Genera
 | `VITE_API_URL` | `frontend/.env` | Optional | Backend API URL (defaults to Vercel production or local server). |
 
 *(Note: If Vercel KV credentials are not set, the backend automatically uses an in-memory `Map` and `Set` fallback for seamless local testing. Data in-memory will reset when the backend server restarts.)*
-
----
 
 ## License
 
